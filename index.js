@@ -2,6 +2,8 @@ const fs = require("fs");
 
 const random = require("random");
 
+const errorObj = { error: "producto no encontrado" };
+
 class Contenedor {
   constructor(file) {
     this.file = file;
@@ -18,7 +20,7 @@ class Contenedor {
     if (filteredArray[0]) {
       return filteredArray[0];
     } else {
-      return null;
+      return errorObj;
     }
   }
   deleteById(id) {
@@ -46,15 +48,22 @@ class Contenedor {
 
 const container = new Contenedor("./products.txt");
 
-console.log(container.getAll());
-
 // EXPRESS //
 
 const express = require("express");
 
-const path = require("path");
-
 const app = express();
+
+const { Router } = express;
+
+const router = Router();
+
+app.use("/api", router); // Mi directorio base es http://localhost:8080/api/
+
+router.use(express.json());
+router.use(express.urlencoded({ extended: true }));
+
+app.use(express.static("public"));
 
 const PORT = 8080;
 
@@ -64,12 +73,21 @@ const server = app.listen(PORT, () => {
 
 server.on("error", (error) => console.log(`Error en servidor ${error}`));
 
-app.get("/productos", (req, res) => {
+router.get("/productos", (req, res) => {
   res.send(container.getAll());
 });
 
-app.get("/productoRandom", (req, res) => {
-  const productsArray = container.getAll();
-  const randomProductIndex = random.int(0, productsArray.length - 1);
-  res.send(productsArray[randomProductIndex]);
+router.get("/productos/:id", (req, res) => {
+  const idProvided = Number(req.params.id);
+  res.send(container.getById(idProvided));
+});
+
+router.post("/productos", (req, res) => {
+  container.save(req.body);
+  res.json(req.body);
+});
+
+router.delete("/productos/:id", (req, res) => {
+  const idProvided = Number(req.params.id);
+  res.send(container.deleteById(idProvided));
 });
