@@ -44,6 +44,15 @@ class Contenedor {
       fs.writeFileSync("./products.txt", JSON.stringify(products));
     }
   }
+  updateById(id, object) {
+    const products = this.getAll();
+    const index = products.findIndex((product) => product.id === id);
+    if (index !== -1) {
+      products.splice(index, 1, object);
+      console.log(products);
+      fs.writeFileSync("./products.txt", JSON.stringify(products));
+    }
+  }
 }
 
 const container = new Contenedor("./products.txt");
@@ -85,6 +94,15 @@ router.get("/productos/:id", (req, res) => {
 router.post("/productos", (req, res) => {
   container.save(req.body);
   res.json(req.body);
+});
+
+router.put("/productos/:id", (req, res) => {
+  const idProvided = Number(req.params.id);
+  container.updateById(idProvided, {
+    ...req.body,
+    id: idProvided,
+  });
+  res.send(container.getById(idProvided));
 });
 
 router.delete("/productos/:id", (req, res) => {
