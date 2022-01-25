@@ -1,4 +1,4 @@
-const fs = require("fs");
+import fs from "fs";
 
 const errorObj = { error: "producto no encontrado" };
 
@@ -55,11 +55,9 @@ class Contenedor {
 
 const container = new Contenedor("./products.txt");
 
-// EXPRESS //
+import express from 'express'
 
-const express = require("express");
-
-const app = express();
+const app = express()
 
 const { Router } = express;
 
@@ -70,40 +68,53 @@ app.use("/api", router); // Mi directorio base es http://localhost:8080/api/
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
-app.use(express.static("public"));
+// COMIENZA EJS //
 
-const PORT = 8080;
+app.set('views', './views');
+app.set('view engine', 'ejs');
 
-const server = app.listen(PORT, () => {
-  console.log(`Servidor http escuchando en el puerto ${server.address().port}`);
-});
+// FIN DE EJS //
 
-server.on("error", (error) => console.log(`Error en servidor ${error}`));
+const productos = []
 
+app.get('/', (req, res) => {
+    res.render('productos', {productos});
+    });
+  
 router.get("/productos", (req, res) => {
-  res.send(container.getAll());
+    res.send(container.getAll());
 });
-
+  
 router.get("/productos/:id", (req, res) => {
-  const idProvided = Number(req.params.id);
-  res.send(container.getById(idProvided));
+    const idProvided = Number(req.params.id);
+    res.send(container.getById(idProvided));
 });
-
+  
 router.post("/productos", (req, res) => {
-  container.save(req.body);
-  res.json(req.body);
+    container.save(req.body);
+    productos.push(req.body)
+    console.log(productos)
+    res.redirect('/')
 });
-
+  
 router.put("/productos/:id", (req, res) => {
-  const idProvided = Number(req.params.id);
-  container.updateById(idProvided, {
-    ...req.body,
-    id: idProvided,
-  });
-  res.send(container.getById(idProvided));
+    const idProvided = Number(req.params.id);
+    container.updateById(idProvided, {
+      ...req.body,
+      id: idProvided,
+    });
+    res.send(container.getById(idProvided));
+});
+  
+router.delete("/productos/:id", (req, res) => {
+    const idProvided = Number(req.params.id);
+    res.send(container.deleteById(idProvided));
 });
 
-router.delete("/productos/:id", (req, res) => {
-  const idProvided = Number(req.params.id);
-  res.send(container.deleteById(idProvided));
-});
+/* ------------------------------------------------------ */
+/* Server Listen */
+const PORT = 8080
+const server = app.listen(PORT, () => {
+    console.log(`Servidor escuchando en el puerto ${server.address().port}`)
+})
+server.on('error', error => console.log(`Error en servidor ${error}`))

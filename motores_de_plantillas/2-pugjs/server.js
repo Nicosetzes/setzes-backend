@@ -1,4 +1,4 @@
-const fs = require("fs");
+import fs from "fs";
 
 const errorObj = { error: "producto no encontrado" };
 
@@ -57,7 +57,7 @@ const container = new Contenedor("./products.txt");
 
 // EXPRESS //
 
-const express = require("express");
+import express from "express";
 
 const app = express();
 
@@ -70,15 +70,18 @@ app.use("/api", router); // Mi directorio base es http://localhost:8080/api/
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
-app.use(express.static("public"));
+// app.use(express.static("public"));
 
-const PORT = 8080;
+// PUGJS //
 
-const server = app.listen(PORT, () => {
-  console.log(`Servidor http escuchando en el puerto ${server.address().port}`);
+app.set('views', './views');
+app.set('view engine', 'pug');
+
+// PUGJS //
+
+app.get('/', (req, res) => {
+  res.render('form', req.query);
 });
-
-server.on("error", (error) => console.log(`Error en servidor ${error}`));
 
 router.get("/productos", (req, res) => {
   res.send(container.getAll());
@@ -107,3 +110,11 @@ router.delete("/productos/:id", (req, res) => {
   const idProvided = Number(req.params.id);
   res.send(container.deleteById(idProvided));
 });
+
+const PORT = 8080;
+
+const server = app.listen(PORT, () => {
+  console.log(`Servidor http escuchando en el puerto ${server.address().port}`);
+});
+
+server.on("error", (error) => console.log(`Error en servidor ${error}`));

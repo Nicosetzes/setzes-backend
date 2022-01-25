@@ -1,0 +1,15 @@
+extends layout_one
+
+block form
+    h2="Ingrese el nuevo producto"
+    form(action="/api/productos" method="POST")
+        p="Título"
+        input(type="text" name="title")
+        p="Precio"
+        input(type="text" name="price")
+        p="Link a la imagen"
+        input(type="text" name="thumbnail")
+        br
+        br
+        button(type="submit")="Enviar"
+    a(href="./api/productos")="Ir a los productos"

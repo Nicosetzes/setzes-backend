@@ -1,0 +1,21 @@
+<h2>Ingrese el nuevo producto</h2>
+<form action="/api/productos" method="POST">
+    {{input_uno}}
+    <br>
+    <input type="text" name="title" />
+    <br>
+    <br>
+    {{input_dos}}
+    <br>
+    <input type="text" name="price" />
+    <br>
+    <br>
+    {{input_tres}}
+    <br>
+    <input type="text" name="thumbnail" />
+    <br>
+    <br>
+    <button>Enviar</button>
+</form>
+<br>
+<a href="./api/productos">Ir a productos</a>
