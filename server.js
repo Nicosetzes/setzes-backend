@@ -1,4 +1,4 @@
-const fs = require("fs");
+import fs from "fs";
 
 const errorObj = { error: "producto no encontrado" };
 
@@ -55,30 +55,54 @@ class Contenedor {
 
 const container = new Contenedor("./products.txt");
 
-// EXPRESS //
+// EXPRESS + ROUTER //
 
-const express = require("express");
+import express from 'express';
 
 const app = express();
 
 const { Router } = express;
-
 const router = Router();
-
 app.use("/api", router); // Mi directorio base es http://localhost:8080/api/
-
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
 app.use(express.static("public"));
 
-const PORT = 8080;
+// COMIENZA EJS //
 
-const server = app.listen(PORT, () => {
-  console.log(`Servidor http escuchando en el puerto ${server.address().port}`);
+app.set('views', './public/views');
+app.set('view engine', 'ejs');
+
+// WEBSOCKETS - CHAT
+
+import http from 'http';
+import {Server, Socket} from 'socket.io';
+
+const server = http.Server(app);
+const io = new Server(server);
+
+const messages = [
+];
+
+io.on('connection', function(socket) {
+  console.log('Un cliente se ha conectado');
+  socket.emit('messages', messages); // emitir todos los mensajes a un cliente nuevo 
+
+  socket.on('new-message', function(data) {
+      messages.push(data); // agregar mensajes a array 
+      io.sockets.emit('messages', messages); //emitir a todos los clientes
+      fs.writeFileSync("./messages.txt", JSON.stringify(messages));
+  });    
 });
 
-server.on("error", (error) => console.log(`Error en servidor ${error}`));
+// LLAMADAS HTTP
+
+const productos = []
+
+app.get('/', (req, res) => {
+  res.render('productos', {productos});
+  });
 
 router.get("/productos", (req, res) => {
   res.send(container.getAll());
@@ -91,7 +115,9 @@ router.get("/productos/:id", (req, res) => {
 
 router.post("/productos", (req, res) => {
   container.save(req.body);
-  res.json(req.body);
+  productos.push(req.body)
+  console.log(productos)
+  res.redirect('/')
 });
 
 router.put("/productos/:id", (req, res) => {
@@ -107,3 +133,12 @@ router.delete("/productos/:id", (req, res) => {
   const idProvided = Number(req.params.id);
   res.send(container.deleteById(idProvided));
 });
+
+// PORT
+
+const PORT = process.env.PORT || 8080;
+
+const srv = server.listen(PORT, () => { 
+    console.log(`Servidor Http con Websockets escuchando en el puerto ${srv.address().port}`);
+})
+srv.on('error', error => console.log(`Error en servidor ${error}`))
