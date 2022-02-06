@@ -1,59 +1,12 @@
 import fs from "fs";
 
-const errorObj = { error: "producto no encontrado" };
-
-class Contenedor {
-  constructor(file) {
-    this.file = file;
-    this.object = [];
-  }
-  getAll() {
-    const fileContent = JSON.parse(fs.readFileSync(this.file, "utf8"));
-    this.object = fileContent;
-    return this.object;
-  }
-  getById(id) {
-    const products = this.getAll();
-    const filteredArray = products.filter((product) => product.id === id);
-    if (filteredArray[0]) {
-      return filteredArray[0];
-    } else {
-      return errorObj;
-    }
-  }
-  deleteById(id) {
-    const products = this.getAll();
-    const filteredArray = products.filter((product) => product.id !== id);
-    fs.writeFileSync("./products.txt", JSON.stringify(filteredArray));
-  }
-  deleteAll() {
-    fs.writeFileSync("./products.txt", JSON.stringify([]));
-  }
-  save(obj) {
-    const products = this.getAll();
-    if (products.length === 0) {
-      const newObj = { ...obj, id: 1 };
-      products.push(newObj);
-      fs.writeFileSync("./products.txt", JSON.stringify(products));
-    } else {
-      const indexOfLastElement = products.length - 1;
-      const newObj = { ...obj, id: products[indexOfLastElement].id + 1 };
-      products.push(newObj);
-      fs.writeFileSync("./products.txt", JSON.stringify(products));
-    }
-  }
-  updateById(id, object) {
-    const products = this.getAll();
-    const index = products.findIndex((product) => product.id === id);
-    if (index !== -1) {
-      products.splice(index, 1, object);
-      console.log(products);
-      fs.writeFileSync("./products.txt", JSON.stringify(products));
-    }
-  }
-}
+import { Contenedor } from './contenedor.js';
 
 const container = new Contenedor("./products.txt");
+
+const errorObj = { error: "producto no encontrado" };
+const errorId = { error: "ID no encontrado" };
+const errorAuth = { error: -1, descripcion: "ruta x método y no autorizada" };
 
 // EXPRESS + ROUTER //
 
@@ -62,10 +15,14 @@ import express from 'express';
 const app = express();
 
 const { Router } = express;
-const router = Router();
-app.use("/api", router); // Mi directorio base es http://localhost:8080/api/
-router.use(express.json());
-router.use(express.urlencoded({ extended: true }));
+const productosR = Router();
+const carritoR = Router();
+app.use("/api/productos", productosR);
+app.use("/api/carrito", carritoR);
+productosR.use(express.json());
+productosR.use(express.urlencoded({ extended: true }));
+carritoR.use(express.json());
+carritoR.use(express.urlencoded({ extended: true }));
 
 app.use(express.static("public"));
 
@@ -77,7 +34,7 @@ app.set('view engine', 'ejs');
 // WEBSOCKETS - CHAT
 
 import http from 'http';
-import {Server, Socket} from 'socket.io';
+import { Server, Socket } from 'socket.io';
 
 const server = http.Server(app);
 const io = new Server(server);
@@ -85,60 +42,167 @@ const io = new Server(server);
 const messages = [
 ];
 
-io.on('connection', function(socket) {
+io.on('connection', function (socket) {
   console.log('Un cliente se ha conectado');
   socket.emit('messages', messages); // emitir todos los mensajes a un cliente nuevo 
 
-  socket.on('new-message', function(data) {
-      messages.push(data); // agregar mensajes a array 
-      io.sockets.emit('messages', messages); //emitir a todos los clientes
-      fs.writeFileSync("./messages.txt", JSON.stringify(messages));
-  });    
+  socket.on('new-message', function (data) {
+    messages.push(data); // agregar mensajes a array 
+    io.sockets.emit('messages', messages); //emitir a todos los clientes
+    fs.writeFileSync("./messages.txt", JSON.stringify(messages));
+  });
 });
 
-// LLAMADAS HTTP
+// CREO CONST ADMINISTRATOR, PARA PERMISOS
+
+let administrator = true;
+
+// LLAMADAS HTTP PARA EL ROUTER BASE /API/PRODUCTOS
 
 const productos = []
 
 app.get('/', (req, res) => {
-  res.render('productos', {productos});
-  });
+  res.render('productos', { productos });
+});
 
-router.get("/productos", (req, res) => {
+productosR.get("/", (req, res) => {
   res.send(container.getAll());
 });
 
-router.get("/productos/:id", (req, res) => {
+productosR.get("/:id", (req, res) => {
   const idProvided = Number(req.params.id);
   res.send(container.getById(idProvided));
 });
 
-router.post("/productos", (req, res) => {
-  container.save(req.body);
-  productos.push(req.body)
-  console.log(productos)
-  res.redirect('/')
+productosR.post("/", (req, res) => {
+  if (administrator) {
+    container.save(req.body);
+    productos.push(req.body)
+    console.log(productos)
+    res.redirect('/')
+  }
+  else {
+    res.send(errorAuth)
+  }
 });
 
-router.put("/productos/:id", (req, res) => {
+productosR.put("/:id", (req, res) => {
   const idProvided = Number(req.params.id);
-  container.updateById(idProvided, {
-    ...req.body,
-    id: idProvided,
-  });
-  res.send(container.getById(idProvided));
+  if (administrator) {
+    container.updateById(idProvided, {
+      ...req.body,
+      id: idProvided,
+    });
+    res.send(container.getById(idProvided));
+  }
+  else {
+    res.send(errorAuth)
+  }
 });
 
-router.delete("/productos/:id", (req, res) => {
+productosR.delete("/:id", (req, res) => {
   const idProvided = Number(req.params.id);
-  res.send(container.deleteById(idProvided));
+  if (administrator) {
+    res.send(container.deleteById(idProvided));
+  }
+  else {
+    res.send(errorAuth)
+  }
+});
+
+// LLAMADAS HTTP PARA EL ROUTER BASE /API/CARRITO
+
+const cartArray = [];
+
+const productsArray = [];
+
+const date = new Date()
+
+// const product = {id, productTimestamp, name, description, code, url, price, stock}
+
+carritoR.get("/:id/productos", (req, res) => {
+  const idProvided = Number(req.params.id);
+  const filteredArray = cartArray.filter((element) => element.cartId === idProvided);
+  if (filteredArray.length === 0) {
+    res.send(errorId);
+  }
+  else {
+    filteredArray[0].products.length > 0 ? res.send(filteredArray[0].products) : res.send({ products: "No hay productos en este carrito" });
+  }
+});
+
+carritoR.post("/", (req, res) => {
+
+  if (cartArray.length === 0) {
+    const newCart = { cartId: 1, cartTimeStamp: date.toLocaleString(), products: [] };
+    cartArray.push(newCart);
+    res.send(newCart.cartId.toString());
+  }
+  else {
+    const indexOfLastElement = cartArray.length - 1;
+    const newCart = { cartId: cartArray[indexOfLastElement].cartId + 1, cartTimeStamp: date.toLocaleString(), products: [] };
+    cartArray.push(newCart);
+    res.send(newCart.cartId.toString())
+  }
+  fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
+});
+
+carritoR.post("/:id/productos", (req, res) => {
+
+  const idProvided = Number(req.params.id);
+  const indexOfElement = cartArray.findIndex((element) => element.cartId === idProvided);
+  if (indexOfElement === -1) {
+    res.send(errorId);
+  }
+  else {
+    productsArray.push(req.body);
+    cartArray[indexOfElement].products = productsArray;
+    res.redirect("/");
+  }
+  fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
+});
+
+carritoR.delete("/:id", (req, res) => {
+  const idProvided = Number(req.params.id);
+  const indexOfElement = cartArray.findIndex((element) => element.cartId === idProvided);
+  if (indexOfElement !== -1) {
+    cartArray.splice(indexOfElement, 1);
+    res.redirect("/");
+  }
+  else {
+    res.send(errorId);
+  }
+  fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
+});
+
+carritoR.delete("/:id/productos/:id_prod", (req, res) => {
+
+  const idProvidedForCart = Number(req.params.id);
+  const idProvidedForProduct = Number(req.params.id_prod);
+
+  const indexOfCart = cartArray.findIndex((element) => element.cartId === idProvidedForCart);
+  if (indexOfCart === -1) {
+    res.send(errorId);
+  }
+  else {
+    const productsFromFilteredCart = cartArray[indexOfCart].products;
+    const indexOfProduct = productsFromFilteredCart.findIndex((element) => element.id === idProvidedForProduct);
+    if (indexOfProduct === -1) {
+      res.send(errorId);
+    }
+    else {
+      productsFromFilteredCart.splice(indexOfProduct, 1)
+      res.send(cartArray);
+    }
+  }
+  fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
 });
 
 // PORT
 
 const PORT = process.env.PORT || 8080;
 
-const srv = server.listen(PORT, () => { 
-    console.log(`Servidor Http con Websockets escuchando en el puerto ${srv.address().port}`);
+const srv = server.listen(PORT, () => {
+  console.log(`Servidor Http con Websockets escuchando en el puerto ${srv.address().port}`);
 })
 srv.on('error', error => console.log(`Error en servidor ${error}`))
