@@ -206,3 +206,10 @@ const srv = server.listen(PORT, () => {
   console.log(`Servidor Http con Websockets escuchando en el puerto ${srv.address().port}`);
 })
 srv.on('error', error => console.log(`Error en servidor ${error}`))
+
+const hola = () => {
+  console.log("hola");
+}
+
+
+
