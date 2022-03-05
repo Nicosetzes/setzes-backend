@@ -2,26 +2,26 @@ import { knexMariaDB } from "./db/database.js";
 
 // Código para eliminar tabla productos (MARIADB):
 
-knexMariaDB.schema
-  .dropTable("productos")
-  .then(() => console.log("Tabla de productos borrada"))
-  .catch((err) => console.log(err));
+// knexMariaDB.schema
+//   .dropTable("productos")
+//   .then(() => console.log("Tabla de productos borrada"))
+//   .catch((err) => console.log(err));
 
 // Código para crear tabla productos (MariaDB):
 
-knexMariaDB.schema
-  .createTable("productos", (table) => {
-    table.increments("id");
-    table.string("name");
-    table.string("productTimestamp");
-    table.string("description");
-    table.string("code");
-    table.string("url");
-    table.float("price");
-    table.float("stock");
-  })
-  .then(() => console.log("Tabla productos creada"))
-  .catch((error) => console.log(error));
+// knexMariaDB.schema
+//   .createTable("productos", (table) => {
+//     table.increments("id");
+//     table.string("name");
+//     table.string("productTimestamp");
+//     table.string("description");
+//     table.string("code");
+//     table.string("url");
+//     table.float("price");
+//     table.float("stock");
+//   })
+//   .then(() => console.log("Tabla productos creada"))
+//   .catch((error) => console.log(error));
 
 // const producto = {
 //   name: "articulo1",

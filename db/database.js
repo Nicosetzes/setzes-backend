@@ -11,7 +11,7 @@ const knexMariaDBConfig = {
     port: 3306,
     user: "root",
     password: "",
-    database: "productos",
+    database: "ecommerce",
   },
 };
 

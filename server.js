@@ -1,8 +1,19 @@
-// import fs from "fs";
-
 import { knexMariaDB } from "./db/database.js";
 
-import { Contenedor } from "./contenedorKnex.js";
+import { knexSqlite3 } from "./db/database.js";
+
+import { Contenedor } from "./contenedores/contenedorKnex.js";
+
+// // MONGODB //
+
+// import mongoose from 'mongoose';
+// // import * as model from './models/estudiantes.js';
+
+// mongoose.connect('mongodb+srv://desnake5:setzes-backend@cluster0.hhq82.mongodb.net/myFirstDatabase?retryWrites=true&w=majority')
+//   .then(() => console.log('Base de datos MongoDB conectada'))
+//   .catch(err => console.log(err))
+
+// // FIN MONGODB //
 
 const container = new Contenedor(knexMariaDB, "productos");
 
