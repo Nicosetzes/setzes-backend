@@ -5,9 +5,11 @@ export class ContenedorMongo {
   }
   getAll() {
     this.schema.find({})
-      .then(products => console.log(products))
-      .then(data => this.object = data)
+      .then(data => {
+        this.object = data
+      })
       .catch(err => console.log(err));
+    return this.object;
     // if (this.object.length === 0) {
     //   throw new Error(`There are no products in catalogue`);
     // } else {
@@ -36,7 +38,7 @@ export class ContenedorMongo {
       .catch(err => console.log(err))
   }
   saveOne(obj) {
-    this.schema.insertOne(obj) // NO FUNCIONA EL MÉTODO INSERTONE, SOLO ME FUNCIONA EL INSERTMANY CON UN ARRAY (DE 1 OBJETO O MÁS)
+    this.schema.create(obj) // 
       .then(data => console.log(data))
       .catch(err => console.log(err));
   }

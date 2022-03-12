@@ -1,0 +1,23 @@
+<% if(arrayOfFakerProducts.length> 0){ %>
+    <div class="table-responsive">
+        <table class="table table-dark">
+            <tr style="color: rgb(158, 240, 147);">
+                <th>Nombre del producto</th>
+                <th>Precio</th>
+                <th>Imagen</th>
+            </tr>
+            <%arrayOfFakerProducts.forEach((producto)=> {%>
+                <tr>
+                    <td>
+                        <%=producto.name%>
+                    </td>
+                    <td>$<%=producto.price%>
+                    </td>
+                    <td><img src="<%=producto.image%>" width="35px" height="35px" /></td>
+                </tr>
+                <%});%>
+        </table>
+    </div>
+    <% } else{ %>
+        <h3 class="alert alert-danger">No se pudieron generar los productos de Faker.</h1>
+            <% } %>

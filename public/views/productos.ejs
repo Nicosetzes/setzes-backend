@@ -1,37 +1,63 @@
 <%- include('./partials/encabezado')-%>
-<body>
-    <div class="container mt-3">
-        <div class="jumbotron">
-            <h1 style="color:blue;">Ingrese los productos</h1>
-            <br>
 
-            <form action="./api/productos" method="post">
-                
-                <div class="form-group">
-                    <label for="title"><b>Título</b></label>
-                    <input id="title" class="form-control" type="text" name="title">
+    <body>
+
+        <% if(!userName){ %>
+            <div class="container mt-3">
+                <div class="jumbotron">
+                    <h1 style="color:blue;">Login de usuario</h1>
+                    <br>
+                    <form action="./login" method="post">
+                        <div class="form-group">
+                            <label for="userName"><b>Nombre de usuario</b></label>
+                            <input id="userName" class="form-control" type="text" name="userName">
+                        </div>
+                        <button class="btn btn-success mt-3 mb-5">Iniciar sesión</button>
+                    </form>
                 </div>
-
-                <div class="form-group">
-                    <label for="price"><b>Precio</b></label>
-                    <input id="price" class="form-control" type="number" name="price">
-                </div>            
-
-                <div class="form-group">
-                    <label for="thumbnail"><b>Link a la imagen</b></label>
-                    <input id="thumbnail" class="form-control" type="text" name="thumbnail">
+            </div>
+            <% } else{ %>
+                <div class="container mt-3">
+                    <div class="jumbotron">
+                        <h1 style="color:blue;">Bienvenido <%-userName-%>
+                        </h1>
+                        <form action="./logout" method="post">
+                            <button class="btn btn-success mt-3 mb-5">Cerrar sesión</button>
+                        </form>
+                    </div>
                 </div>
+                <% } %>
+                    <div class="container mt-3">
+                        <div class="jumbotron">
+                            <h1 style="color:blue;">Ingrese los productos</h1>
+                            <br>
 
-                <button class="btn btn-success mt-3 mb-5">Enviar</button>
-            </form>
+                            <form action="./api/productos" method="post">
 
-            <h2 style="color:crimson;">Historial</h2>
-            <%- include('./tabla')-%>
-            <%- include('./chat')-%>
-        </div>
-    </div>
-<script src="../js/main.js"></script>
-</body>
+                                <div class="form-group">
+                                    <label for="title"><b>Título</b></label>
+                                    <input id="title" class="form-control" type="text" name="title">
+                                </div>
 
-<%- include('./partials/pie')-%>
+                                <div class="form-group">
+                                    <label for="price"><b>Precio</b></label>
+                                    <input id="price" class="form-control" type="number" name="price">
+                                </div>
 
+                                <div class="form-group">
+                                    <label for="thumbnail"><b>Link a la imagen</b></label>
+                                    <input id="thumbnail" class="form-control" type="text" name="thumbnail">
+                                </div>
+
+                                <button class="btn btn-success mt-3 mb-5">Enviar</button>
+                            </form>
+
+                            <h2 style="color:crimson;">Historial</h2>
+                            <%- include('./tabla')-%>
+                                <%- include('./chat')-%>
+                        </div>
+                    </div>
+                    <script src="../js/main.js"></script>
+    </body>
+
+    <%- include('./partials/pie')-%>
