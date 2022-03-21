@@ -1,21 +1,27 @@
-import { knexMariaDB } from "./db/database.js";
+// import { knexMariaDB } from "./db/database.js";
 
-import { knexSqlite3 } from "./db/database.js";
+// import { knexSqlite3 } from "./db/database.js";
 
-import { Contenedor } from "./contenedores/contenedorKnex.js";
+// import { Contenedor } from "./contenedores/contenedorKnex.js";
 
 // MONGODB //
 
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-import { ContenedorMongo } from "./contenedores/contenedorMongo.js"
-import * as model from './models/messages.js';
+mongoose
+  .connect(
+    "mongodb+srv://desnake5:setzes-backend@cluster0.hhq82.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+  )
+  .then(() => console.log("Base de datos MongoDB conectada"))
+  .catch((err) => console.log(err));
 
-mongoose.connect('mongodb+srv://desnake5:setzes-backend@cluster0.hhq82.mongodb.net/myFirstDatabase?retryWrites=true&w=majority')
-  .then(() => console.log('Base de datos MongoDB conectada'))
-  .catch(err => console.log(err))
+import { ContenedorMongo } from "./contenedores/contenedorMongo.js";
 
-const containerMongo = new ContenedorMongo(model.messagesModel);
+import { messagesModel } from "./models/messages.js";
+const containerMongoMessages = new ContenedorMongo(messagesModel);
+
+import { usersModel } from "./models/users.js";
+const containerMongoUsers = new ContenedorMongo(usersModel);
 
 // FIN MONGODB //
 
@@ -23,49 +29,137 @@ const errorObj = { error: "producto no encontrado" };
 const errorId = { error: "ID no encontrado" };
 const errorAuth = { error: -1, descripcion: "ruta x método y no autorizada" };
 
-// EXPRESS + ROUTER + SESSION (COOKIES) //
+// CREO CONST ADMINISTRATOR, PARA PERMISOS
+
+let administrator = true;
+
+/* -------------------- DATABASE -------------------- */
+
+const usuarios = [];
+
+/* -------------------- PASSPORT -------------------- */
+
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+
+passport.use(
+  "register",
+  new LocalStrategy(
+    {
+      passReqToCallback: true,
+    },
+    (req, username, password, done) => {
+      containerMongoUsers.getAll().then((allUsers) => {
+        console.log("Los usuarios en Mongo: " + allUsers.length);
+        const isUser = allUsers.find(
+          (element) => element.username === username
+        );
+        if (isUser) return done("Already registered");
+      });
+
+      const newUser = {
+        username: username,
+        password: createHash(password),
+      };
+
+      containerMongoUsers.saveOne(newUser);
+
+      // usuarios.push(user);
+      return done(null, newUser);
+    }
+  )
+);
+
+import bCrypt from "bcrypt";
+
+const createHash = (password) => {
+  return bCrypt.hashSync(password, bCrypt.genSaltSync(10), null);
+};
+
+passport.use(
+  "login",
+  new LocalStrategy((username, password, done) => {
+    const user = usuarios.find((usuario) => usuario.username === username);
+
+    if (!user) return done(null, false);
+
+    if (user.password !== password) return done(null, false);
+
+    user.contador = 0;
+
+    return done(null, user);
+  })
+);
+
+passport.serializeUser((user, done) => done(null, user.username));
+
+passport.deserializeUser((username, done) => {
+  const allUsers = containerMongoUsers.getAll();
+  const deserializedUser = allUsers.find(
+    (element) => element.username === username
+  );
+  done(null, deserializedUser);
+});
+
+/* -------------------- SERVER -------------------- */
+
+const app = express();
+
+/* -------------------- MIDDLEWARES -------------------- */
 
 import express from "express";
-import cookieParser from "cookie-parser";
 import session from "express-session";
 
 import MongoStore from "connect-mongo";
-const advancedOptions = { useNewUrlParser: true, useUnifiedTopology: true }
+const advancedOptions = { useNewUrlParser: true, useUnifiedTopology: true };
 
-const app = express();
-app.use(cookieParser())
-app.use(session({
-  store: MongoStore.create({
-    //En Atlas connect App :  Make sure to change the node version to 2.2.12:
-    mongoUrl: 'mongodb://desnake5:setzes-backend@cluster0-shard-00-00.hhq82.mongodb.net:27017,cluster0-shard-00-01.hhq82.mongodb.net:27017,cluster0-shard-00-02.hhq82.mongodb.net:27017/myFirstDatabase?ssl=true&replicaSet=atlas-8z3eku-shard-0&authSource=admin&retryWrites=true&w=majority',
-    mongoOptions: advancedOptions
-  }),
-  secret: 'someSecret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 60000
-  }
-}))
+app.use(
+  session({
+    store: MongoStore.create({
+      //En Atlas connect App :  Make sure to change the node version to 2.2.12:
+      mongoUrl:
+        "mongodb://desnake5:setzes-backend@cluster0-shard-00-00.hhq82.mongodb.net:27017,cluster0-shard-00-01.hhq82.mongodb.net:27017,cluster0-shard-00-02.hhq82.mongodb.net:27017/myFirstDatabase?ssl=true&replicaSet=atlas-8z3eku-shard-0&authSource=admin&retryWrites=true&w=majority",
+      mongoOptions: advancedOptions,
+    }),
+    secret: "someSecret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 60000,
+    },
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static("public"));
+
+/* -------------------- ROUTER -------------------- */
 
 const { Router } = express;
 const productosR = Router();
 const carritoR = Router();
 app.use("/api/productos", productosR);
 app.use("/api/carrito", carritoR);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 productosR.use(express.json());
 productosR.use(express.urlencoded({ extended: true }));
 carritoR.use(express.json());
 carritoR.use(express.urlencoded({ extended: true }));
 
-app.use(express.static("public"));
-
-// COMIENZA EJS //
+/* -------------------- EJS -------------------- */
 
 app.set("views", "./public/views");
 app.set("view engine", "ejs");
+
+/* -------------------- AUTH -------------------- */
+
+const isAuth = (req, res, next) => {
+  console.log(usuarios);
+  req.isAuthenticated() ? next() : res.redirect("/login");
+};
 
 // WEBSOCKETS - CHAT
 
@@ -78,7 +172,7 @@ const io = new Server(server);
 // const messages = [];
 
 const saveMessage = (message) => {
-  containerMongo.saveOne(message);
+  containerMongoMessages.saveOne(message);
 };
 
 // UTILIZO NORMALIZR PARA NORMALIZAR LOS DATOS (MENSAJES) QUE PROVIENEN DE LA BASE DE DATOS //
@@ -93,70 +187,115 @@ const messageSchema = new schema.Entity("message");
 
 // Defino un esquema para cada autor //
 
-const authorSchema = new schema.Entity('author', {
-  autor: messageSchema
-}
-  , { idAttribute: 'email' }
+const authorSchema = new schema.Entity(
+  "author",
+  {
+    autor: messageSchema,
+  },
+  { idAttribute: "email" }
 );
 
 const print = (obj) => {
-  console.log(util.inspect(obj, false, 12, true))
-}
+  console.log(util.inspect(obj, false, 12, true));
+};
 
 // Suprimí el .destroy, y ello me permitió guardar más allá del 1er mensaje
 
 io.on("connection", function (socket) {
   console.log("Un cliente se ha conectado");
-  // const allMessages = containerMongo.getAll();
+  // const allMessages = containerMongoMessages.getAll();
   // console.log(" ---------- OBJETO NORMALIZADO ----------")
   // const normalizedData = normalize(allMessages, authorSchema);
   // print(normalizedData);
 
-  socket.emit("messages", containerMongo.getAll()); // emitir todos los mensajes a un cliente nuevo
+  socket.emit("messages", containerMongoMessages.getAll()); // emitir todos los mensajes a un cliente nuevo
 
   socket.on("new-message", function (data) {
-    saveMessage(data)
-    io.sockets.emit("messages", containerMongo.getAll());
+    saveMessage(data);
+    io.sockets.emit("messages", containerMongoMessages.getAll());
   });
 });
 
-// CREO CONST ADMINISTRATOR, PARA PERMISOS
-
-let administrator = true;
-
-// CREO LLAMADAS HTTP SIN ROUTER
+/* -------------------- ROUTES -------------------- */
 
 const productos = [];
 let userName;
 
-app.get("/", (req, res) => {
-  if (req.session.userName) {
-    req.session.cookie.originalMaxAge = 60000;
-    let userName = req.session.userName;
-    res.render("productos", { productos, userName });
-    return;
-  }
+// PARA LOGIN
+
+app.get("/login", (req, res) => {
+  userName ? res.redirect("/") : res.render("login", {});
+});
+
+app.post(
+  "/login",
+  passport.authenticate("login", {
+    failureRedirect: "/faillogin",
+    successRedirect: "/",
+  })
+);
+
+app.get("/faillogin", (req, res) => {
+  res.render("login-error", {});
+});
+
+// LOGOUT
+
+app.get("/logout", (req, res) => {
+  req.logout();
+  res.redirect("/");
+});
+
+// INICIO
+
+app.get("/", isAuth, (req, res) => {
   res.render("productos", { productos, userName });
 });
 
-// PARA LOGIN Y LOGOUT:
+// app.get("/", (req, res) => {
+//   if (req.session.userName) {
+//     req.session.cookie.originalMaxAge = 60000;
+//     let userName = req.session.userName;
+//     res.render("productos", { productos, userName });
+//     return;
+//   }
+//   res.render("productos", { productos, userName });
+// });
 
-app.post("/login", (req, res) => {
-  req.session.userName = req.body.userName;
-  req.session.contador = 1;
-  let userName = req.session.userName; // Para pasarle al res.render();
-  console.log(req.session.cookie);
-  res.render("productos", { productos, userName });
-})
+// PARA REGISTER:
 
-app.post('/logout', (req, res) => {
-  req.session.destroy(err => {
-    if (!err) {
-      res.render("logout");
-    }
-    else res.send({ status: 'Logout ERROR', body: err })
+app.get("/register", (req, res) => {
+  res.render("register", {});
+});
+
+app.post(
+  "/register",
+  passport.authenticate("register", {
+    failureRedirect: "/failregister",
+    successRedirect: "/",
   })
-})
+);
+
+app.get("/failregister", (req, res) => {
+  res.render("register-error", {});
+});
+
+// DATOS
+
+app.get("/datos", isAuth, (req, res) => {
+  console.log(req.user.contador);
+
+  if (!req.user.contador) {
+    req.user.contador = 0;
+  }
+
+  req.user.contador++;
+
+  res.render("datos", {
+    datos: usuarios.find((usuario) => usuario.username === req.user.username),
+    contador: req.user.contador,
+  });
+});
 
 // LLAMADAS HTTP PARA EL ROUTER BASE /API/PRODUCTOS
 
@@ -171,7 +310,7 @@ productosR.get("/:id", (req, res) => {
 
 productosR.post("/", (req, res) => {
   if (administrator) {
-    console.log(req.body)
+    console.log(req.body);
     container.save(req.body);
     productos.push(req.body);
     console.log(productos);
@@ -304,16 +443,17 @@ carritoR.delete("/:id/productos/:id_prod", (req, res) => {
 
 // Desafío MOCKS Y NORMALIZACIÓN: Genero una ruta '/api/productos-test' que devuelva 5 productos al azar utilizando Faker.js //
 
-import faker from 'faker'
-faker.locale = 'es'
+import faker from "faker";
+// import { createHash } from "crypto";
+faker.locale = "es";
 
 const createFakerProduct = () => {
   return {
     name: faker.commerce.productName(),
     price: faker.commerce.price(),
-    image: faker.image.image()
-  }
-}
+    image: faker.image.image(),
+  };
+};
 
 const showFakerProducts = (qty) => {
   const products = [];
@@ -321,7 +461,7 @@ const showFakerProducts = (qty) => {
     products.push(createFakerProduct());
   }
   return products;
-}
+};
 
 app.get("/api/productos-test", (req, res) => {
   const arrayOfFakerProducts = showFakerProducts(5);
