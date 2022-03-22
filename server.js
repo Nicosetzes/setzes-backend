@@ -4,7 +4,15 @@
 
 // import { Contenedor } from "./contenedores/contenedorKnex.js";
 
-// MONGODB //
+// const errorObj = { error: "producto no encontrado" };
+// const errorId = { error: "ID no encontrado" };
+// const errorAuth = { error: -1, descripcion: "ruta x método y no autorizada" };
+
+// CREO CONST ADMINISTRATOR, PARA PERMISOS
+
+let administrator = true;
+
+/* -------------------- DATABASE -------------------- */
 
 import mongoose from "mongoose";
 
@@ -17,102 +25,27 @@ mongoose
 
 import { ContenedorMongo } from "./contenedores/contenedorMongo.js";
 
-import { messagesModel } from "./models/messages.js";
-const containerMongoMessages = new ContenedorMongo(messagesModel);
+import * as messagesModel from "./models/messages.js";
+const containerMongoMessages = new ContenedorMongo(messagesModel.messagesModel);
 
-import { usersModel } from "./models/users.js";
-const containerMongoUsers = new ContenedorMongo(usersModel);
-
-// FIN MONGODB //
-
-const errorObj = { error: "producto no encontrado" };
-const errorId = { error: "ID no encontrado" };
-const errorAuth = { error: -1, descripcion: "ruta x método y no autorizada" };
-
-// CREO CONST ADMINISTRATOR, PARA PERMISOS
-
-let administrator = true;
-
-/* -------------------- DATABASE -------------------- */
-
-const usuarios = [];
-
-/* -------------------- PASSPORT -------------------- */
-
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-
-passport.use(
-  "register",
-  new LocalStrategy(
-    {
-      passReqToCallback: true,
-    },
-    (req, username, password, done) => {
-      containerMongoUsers.getAll().then((allUsers) => {
-        console.log("Los usuarios en Mongo: " + allUsers.length);
-        const isUser = allUsers.find(
-          (element) => element.username === username
-        );
-        if (isUser) return done("Already registered");
-      });
-
-      const newUser = {
-        username: username,
-        password: createHash(password),
-      };
-
-      containerMongoUsers.saveOne(newUser);
-
-      // usuarios.push(user);
-      return done(null, newUser);
-    }
-  )
-);
-
-import bCrypt from "bcrypt";
-
-const createHash = (password) => {
-  return bCrypt.hashSync(password, bCrypt.genSaltSync(10), null);
-};
-
-passport.use(
-  "login",
-  new LocalStrategy((username, password, done) => {
-    const user = usuarios.find((usuario) => usuario.username === username);
-
-    if (!user) return done(null, false);
-
-    if (user.password !== password) return done(null, false);
-
-    user.contador = 0;
-
-    return done(null, user);
-  })
-);
-
-passport.serializeUser((user, done) => done(null, user.username));
-
-passport.deserializeUser((username, done) => {
-  const allUsers = containerMongoUsers.getAll();
-  const deserializedUser = allUsers.find(
-    (element) => element.username === username
-  );
-  done(null, deserializedUser);
-});
+// import { usersModel } from "./models/users.js";
+// const containerMongoUsers = new ContenedorMongo(usersModel.usersModel);
 
 /* -------------------- SERVER -------------------- */
+
+import express from "express";
 
 const app = express();
 
 /* -------------------- MIDDLEWARES -------------------- */
 
-import express from "express";
 import session from "express-session";
-
+import cookieParser from "cookie-parser";
 import MongoStore from "connect-mongo";
+
 const advancedOptions = { useNewUrlParser: true, useUnifiedTopology: true };
 
+app.use(cookieParser("someSecret"));
 app.use(
   session({
     store: MongoStore.create({
@@ -125,17 +58,96 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      maxAge: 60000,
+      maxAge: 100000,
     },
   })
 );
 
-app.use(passport.initialize());
-app.use(passport.session());
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+/* -------------------- PASSPORT -------------------- */
+
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+
+import bCrypt from "bcrypt";
+
+const createHash = (password) => {
+  return bCrypt.hashSync(password, bCrypt.genSaltSync(10), null);
+};
+
+passport.use(
+  "register",
+  new LocalStrategy(
+    (username, password, done) => {
+
+      usersModel.findOne({ username: username })
+        .then(user => {
+          if (!user) {
+            const newUser = new usersModel({
+              username: username,
+              password: createHash(password)
+            });
+            console.log(newUser);
+            usersModel.create(newUser)
+              .then(user => {
+                return done(null, user);
+              })
+              .catch(err => {
+                return done(null, false, { message: err })
+              })
+          }
+          else {
+            return done(null, false, { message: "This user has already been registered" });
+          }
+        })
+        .catch(err => {
+          return done(null, false, { message: err })
+        })
+    }
+  )
+);
+
+passport.use(
+  "login",
+  new LocalStrategy(
+    {
+      passReqToCallback: true, // Allows for req argument to be present!
+    },
+    (req, username, password, done) => {
+
+      usersModel.findOne({ username: username })
+        .then(user => {
+          if (!user) return done(null, false, { message: "The user doesn't exist in the DB" }); // How may I access this object in order to display the message?;
+          bCrypt.compare(password, user.password, (err, success) => {
+            if (err) throw err;
+            if (success) {
+              req.session.username = user.username;
+              done(null, user)
+            }
+            else {
+              done(null, false, { message: "User was found in the DB, but passwords don't match" }); // Same as above;
+            }
+          });
+        })
+        .catch(err => {
+          return done(null, false, { message: err })
+        });
+
+      passport.serializeUser((user, done) => done(null, user.id));
+
+      passport.deserializeUser((id, done) => {
+        usersModel.findById(id, (err, user) => {
+          done(err, user);
+        });
+      });
+    })
+);
 
 /* -------------------- ROUTER -------------------- */
 
@@ -157,7 +169,6 @@ app.set("view engine", "ejs");
 /* -------------------- AUTH -------------------- */
 
 const isAuth = (req, res, next) => {
-  console.log(usuarios);
   req.isAuthenticated() ? next() : res.redirect("/login");
 };
 
@@ -219,12 +230,19 @@ io.on("connection", function (socket) {
 /* -------------------- ROUTES -------------------- */
 
 const productos = [];
-let userName;
+
+// INICIO
+
+app.get("/", isAuth, (req, res) => {
+  req.session.cookie.maxAge = 100000;
+  const userEmail = req.session.username;
+  res.render("productos", { productos, userEmail });
+});
 
 // PARA LOGIN
 
 app.get("/login", (req, res) => {
-  userName ? res.redirect("/") : res.render("login", {});
+  res.render("login", {});
 });
 
 app.post(
@@ -241,15 +259,9 @@ app.get("/faillogin", (req, res) => {
 
 // LOGOUT
 
-app.get("/logout", (req, res) => {
+app.post("/logout", (req, res) => {
   req.logout();
   res.redirect("/");
-});
-
-// INICIO
-
-app.get("/", isAuth, (req, res) => {
-  res.render("productos", { productos, userName });
 });
 
 // app.get("/", (req, res) => {
@@ -278,23 +290,6 @@ app.post(
 
 app.get("/failregister", (req, res) => {
   res.render("register-error", {});
-});
-
-// DATOS
-
-app.get("/datos", isAuth, (req, res) => {
-  console.log(req.user.contador);
-
-  if (!req.user.contador) {
-    req.user.contador = 0;
-  }
-
-  req.user.contador++;
-
-  res.render("datos", {
-    datos: usuarios.find((usuario) => usuario.username === req.user.username),
-    contador: req.user.contador,
-  });
 });
 
 // LLAMADAS HTTP PARA EL ROUTER BASE /API/PRODUCTOS
