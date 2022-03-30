@@ -1,12 +1,8 @@
-// import { knexMariaDB } from "./db/database.js";
+// Utilizo dotenv para aplicar variables de entorno //
 
-// import { knexSqlite3 } from "./db/database.js";
-
-// import { Contenedor } from "./contenedores/contenedorKnex.js";
-
-// const errorObj = { error: "producto no encontrado" };
-// const errorId = { error: "ID no encontrado" };
-// const errorAuth = { error: -1, descripcion: "ruta x método y no autorizada" };
+const dotenv = require("dotenv").config()
+// import dotenv from 'dotenv'
+// dotenv.config()
 
 // CREO CONST ADMINISTRATOR, PARA PERMISOS
 
@@ -14,47 +10,57 @@ let administrator = true;
 
 /* -------------------- DATABASE -------------------- */
 
-import mongoose from "mongoose";
+const mongoose = require("mongoose")
+// import mongoose from "mongoose";
 
 mongoose
   .connect(
-    "mongodb+srv://desnake5:setzes-backend@cluster0.hhq82.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+    `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@cluster0.hhq82.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
   )
   .then(() => console.log("Base de datos MongoDB conectada"))
   .catch((err) => console.log(err));
 
-import { ContenedorMongo } from "./contenedores/contenedorMongo.js";
+// import { ContenedorMongo } from "./contenedores/contenedorMongo.js";
+const ContenedorMongo = require("./contenedores/contenedorMongo.js");
 
-import * as messagesModel from "./models/messages.js";
-const containerMongoMessages = new ContenedorMongo(messagesModel.messagesModel);
+// import * as messagesModel from "./models/messages.js";
+const messagesModel = require("./models/messages.js")
+
+const containerMongoMessages = new ContenedorMongo(messagesModel);
 
 // import { usersModel } from "./models/users.js";
+const usersModel = require("./models/users.js");
+
 // const containerMongoUsers = new ContenedorMongo(usersModel.usersModel);
 
 /* -------------------- SERVER -------------------- */
 
-import express from "express";
+// import express from "express";
+const express = require("express");
 
 const app = express();
 
 /* -------------------- MIDDLEWARES -------------------- */
 
-import session from "express-session";
-import cookieParser from "cookie-parser";
-import MongoStore from "connect-mongo";
+// import session from "express-session";
+const session = require("express-session");
+// import cookieParser from "cookie-parser";
+const cookieParser = require("cookie-parser");
+// import MongoStore from "connect-mongo";
+const MongoStore = require("connect-mongo");
 
 const advancedOptions = { useNewUrlParser: true, useUnifiedTopology: true };
 
-app.use(cookieParser("someSecret"));
+// app.use(cookieParser("someSecret"));
 app.use(
   session({
     store: MongoStore.create({
       //En Atlas connect App :  Make sure to change the node version to 2.2.12:
       mongoUrl:
-        "mongodb://desnake5:setzes-backend@cluster0-shard-00-00.hhq82.mongodb.net:27017,cluster0-shard-00-01.hhq82.mongodb.net:27017,cluster0-shard-00-02.hhq82.mongodb.net:27017/myFirstDatabase?ssl=true&replicaSet=atlas-8z3eku-shard-0&authSource=admin&retryWrites=true&w=majority",
+        `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@cluster0-shard-00-00.hhq82.mongodb.net:27017,cluster0-shard-00-01.hhq82.mongodb.net:27017,cluster0-shard-00-02.hhq82.mongodb.net:27017/myFirstDatabase?ssl=true&replicaSet=atlas-8z3eku-shard-0&authSource=admin&retryWrites=true&w=majority`,
       mongoOptions: advancedOptions,
     }),
-    secret: "someSecret",
+    secret: `${process.env.MONGO_SECRET}`,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -67,15 +73,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
+/* -------------------- PASSPORT -------------------- */
+
+// import passport from "passport";
+const passport = require("passport");
+
 app.use(passport.initialize());
 app.use(passport.session());
 
-/* -------------------- PASSPORT -------------------- */
+// import { Strategy as LocalStrategy } from "passport-local";
 
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-
-import bCrypt from "bcrypt";
+const LocalStrategy = require("passport-local").Strategy;
+// import bCrypt from "bcrypt";
+const bCrypt = require("bcrypt");
 
 const createHash = (password) => {
   return bCrypt.hashSync(password, bCrypt.genSaltSync(10), null);
@@ -123,8 +133,10 @@ passport.use(
 
       usersModel.findOne({ username: username })
         .then(user => {
+          console.log(user);
           if (!user) return done(null, false, { message: "The user doesn't exist in the DB" }); // How may I access this object in order to display the message?;
           bCrypt.compare(password, user.password, (err, success) => {
+            console.log(password, user.password);
             if (err) throw err;
             if (success) {
               req.session.username = user.username;
@@ -174,11 +186,17 @@ const isAuth = (req, res, next) => {
 
 // WEBSOCKETS - CHAT
 
-import http from "http";
-import { Server, Socket } from "socket.io";
+// import http from "http";
+const http = require("http");
 
-const server = http.Server(app);
-const io = new Server(server);
+// import { Server, Socket } from "socket.io";
+const { Server: HttpServer } = require('http')
+const { Server: IOServer } = require('socket.io')
+
+// const server = http.Server(app);
+const httpServer = new HttpServer(app)
+// const io = new Server(server);
+const io = new IOServer(httpServer)
 
 // const messages = [];
 
@@ -188,27 +206,27 @@ const saveMessage = (message) => {
 
 // UTILIZO NORMALIZR PARA NORMALIZAR LOS DATOS (MENSAJES) QUE PROVIENEN DE LA BASE DE DATOS //
 
-import { normalize, denormalize, schema } from "normalizr";
+// import { normalize, denormalize, schema } from "normalizr";
 
-import util from "util";
+// const util = require("util");
 
 // Defino un esquema para cada mensaje //
 
-const messageSchema = new schema.Entity("message");
+// const messageSchema = new schema.Entity("message");
 
 // Defino un esquema para cada autor //
 
-const authorSchema = new schema.Entity(
-  "author",
-  {
-    autor: messageSchema,
-  },
-  { idAttribute: "email" }
-);
+// const authorSchema = new schema.Entity(
+//   "author",
+//   {
+//     autor: messageSchema,
+//   },
+//   { idAttribute: "email" }
+// );
 
-const print = (obj) => {
-  console.log(util.inspect(obj, false, 12, true));
-};
+// const print = (obj) => {
+//   console.log(util.inspect(obj, false, 12, true));
+// };
 
 // Suprimí el .destroy, y ello me permitió guardar más allá del 1er mensaje
 
@@ -264,16 +282,6 @@ app.post("/logout", (req, res) => {
   res.redirect("/");
 });
 
-// app.get("/", (req, res) => {
-//   if (req.session.userName) {
-//     req.session.cookie.originalMaxAge = 60000;
-//     let userName = req.session.userName;
-//     res.render("productos", { productos, userName });
-//     return;
-//   }
-//   res.render("productos", { productos, userName });
-// });
-
 // PARA REGISTER:
 
 app.get("/register", (req, res) => {
@@ -290,6 +298,35 @@ app.post(
 
 app.get("/failregister", (req, res) => {
   res.render("register-error", {});
+});
+
+// RUTA INFO (DESAFÍO CLASE 28) //
+
+app.get("/info", (req, res) => {
+  const info = {
+    argumentos_de_entrada: process.argv,
+    so: process.platform,
+    node_version: process.version,
+    rss: process.memoryUsage().rss,
+    path: process.execPath,
+    PID: process.pid,
+    folder: process.cwd(),
+  }
+  res.render("info", { info });
+});
+
+// RUTAS NO BLOQUEANTES, USO DE FORK (DESAFÍO CLASE 28) //
+
+const { fork } = require("child_process");
+const path = require("path");
+
+app.get("/api/randoms", (req, res) => {
+  // const qty = Number(req.query.qty) || 100000000;
+  const calculation = fork(path.resolve(__dirname, 'computo.js'));
+  calculation.send('start');
+  calculation.on('message', result => {
+    res.json({ result })
+  });
 });
 
 // LLAMADAS HTTP PARA EL ROUTER BASE /API/PRODUCTOS
@@ -438,9 +475,9 @@ carritoR.delete("/:id/productos/:id_prod", (req, res) => {
 
 // Desafío MOCKS Y NORMALIZACIÓN: Genero una ruta '/api/productos-test' que devuelva 5 productos al azar utilizando Faker.js //
 
-import faker from "faker";
+// import faker from "faker";
 // import { createHash } from "crypto";
-faker.locale = "es";
+// faker.locale = "es";
 
 const createFakerProduct = () => {
   return {
@@ -465,9 +502,9 @@ app.get("/api/productos-test", (req, res) => {
 
 // PORT
 
-const PORT = process.env.PORT || 8080;
+const PORT = parseInt(process.argv[2]) || 8080;
 
-const srv = server.listen(PORT, () => {
+const srv = httpServer.listen(PORT, () => {
   console.log(
     `Servidor Http con Websockets escuchando en el puerto ${srv.address().port}`
   );

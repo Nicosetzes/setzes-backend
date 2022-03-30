@@ -1,0 +1,32 @@
+<%- include('./partials/header')-%>
+    <div class="table-responsive">
+        <table class="table table-dark">
+            <tr style="color: yellow;">
+                <th>Argumentos de entrada</th>
+                <th>Sistema operativo (OS)</th>
+                <th>Versión de Node</th>
+                <th>Memoria reservada (rss)</th>
+                <th>Path de ejecución</th>
+                <th>Process ID (PID)</th>
+                <th>Carpeta del proyecto</th>
+            </tr>
+            <tr>
+                <td>
+                    <%=info.argumentos_de_entrada%>
+                </td>
+                <td>$<%=info.so%>
+                </td>
+                <td>$<%=info.node_version%>
+                </td>
+                <td>$<%=info.rss%>
+                </td>
+                <td>$<%=info.path%>
+                </td>
+                <td>$<%=info.PID%>
+                </td>
+                <td>$<%=info.folder%>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <%- include('./partials/footer')-%>

@@ -1,4 +1,4 @@
-export class ContenedorMongo {
+module.exports = class ContenedorMongo {
   constructor(schema) {
     this.schema = schema;
     this.object = [];
