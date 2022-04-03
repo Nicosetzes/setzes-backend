@@ -300,7 +300,7 @@ app.get("/failregister", (req, res) => {
   res.render("register-error", {});
 });
 
-// RUTA INFO (DESAFÍO CLASE 28) //
+// *************** RUTA INFO (DESAFÍO CLASE 28) *************** //
 
 app.get("/info", (req, res) => {
   const info = {
@@ -500,13 +500,96 @@ app.get("/api/productos-test", (req, res) => {
   res.render("productos-test", { arrayOfFakerProducts });
 });
 
-// PORT
+// *************** DESAFÍO CLASE 30 *************** //
+
+// DEFINO SI INICIO EL SERVER EN MODO FORK O EN MODO CLUSTER (FORK POR DEFECTO) //
 
 const PORT = parseInt(process.argv[2]) || 8080;
 
-const srv = httpServer.listen(PORT, () => {
-  console.log(
-    `Servidor Http con Websockets escuchando en el puerto ${srv.address().port}`
-  );
-});
-srv.on("error", (error) => console.log(`Error en servidor ${error}`));
+const isCluster = process.argv[3] || "FORK";
+
+const cluster = require("cluster");
+const numCPUs = require("os").cpus().length;
+
+if (isCluster === "CLUSTER") {
+  if (cluster.isPrimary) {
+    console.log(numCPUs);
+    console.log(`PRIMARY ${process.pid} is running`)
+
+    for (let i = 0; i < numCPUs; i++) {
+      cluster.fork();
+    }
+
+    cluster.on("exit", worker => {
+      console.log("Worker", worker.process.pid, "died", new Date().toLocaleString());
+      cluster.fork();
+    })
+  }
+
+  /* WORKERS */
+
+  else {
+
+    const PORT = parseInt(process.argv[2]) || 8080;
+
+    app.get("/api", (req, res) => {
+      res.send(`Servidor Express en ${PORT} - <b>PID ${process.pid}</b> - ${new Date().toLocaleDateString()}`)
+    });
+
+    app.get("/api/info", (req, res) => {
+      res.send(`Servidor Express en ${PORT} - <b>Cantidad de procesadores: ${numCPUs}</b>`)
+    });
+
+    app.listen(PORT, err => {
+      if (!err) console.log(`Servidor Express escuchando en el puerto ${PORT} - PID WORKER ${process.pid}`);
+    });
+  };
+}
+
+else {
+
+  // MODO FORK
+
+  app.get("/api", (req, res) => {
+    res.send(`Servidor Express en ${PORT} - <b>PID ${process.pid}</b> - ${new Date().toLocaleDateString()}`);
+  });
+
+  app.get("/api/info", (req, res) => {
+    res.send(`Servidor Express en ${PORT} - <b>Cantidad de procesadores: ${numCPUs}</b>`)
+  });
+
+  app.listen(PORT, err => {
+    if (!err) console.log(`Servidor Express escuchando en el puerto ${PORT} - PID WORKER ${process.pid}`);
+  });
+
+}
+
+// tasklist /fi "imagename eq node.exe" -> Lista todos los procesos de node.js activos.
+
+// ************* MODOS FORK Y CLUSTER CON PM2 ************* //
+
+// --------------- MODO FORK --------------- //
+
+// pm2 start server.js --name="ServerX" --watch -- PORT
+
+// --------------- MODO CLUSTER --------------- //
+
+// pm2 start server.js --name="ServerX" --watch -i max -- PORT
+
+// --------------- MODO CLUSTER CON NGINX (API/RANDOMS) --------------- //
+
+// pm2 start server.js --name="ServerX" --watch -i max -- 8082
+// pm2 start server.js --name="ServerX" --watch -i max -- 8083
+// pm2 start server.js --name="ServerX" --watch -i max -- 8084
+// pm2 start server.js --name="ServerX" --watch -i max -- 8085
+
+// PORT
+
+// const PORT = parseInt(process.argv[2]) || 8080;
+
+// const srv = httpServer.listen(PORT, () => {
+//   console.log(
+//     `Servidor Http con Websockets escuchando en el puerto ${srv.address().port}`
+//   );
+// });
+// srv.on("error", (error) => console.log(`Error en servidor ${error}`));

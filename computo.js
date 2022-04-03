@@ -19,14 +19,13 @@ const calculo = (qty) => {
     return count;
 }
 
-
 process.on('exit', () => {
     console.log(`worker #${process.pid} cerrado`)
 })
 
 process.on('message', msg => {
     console.log(`worker #${process.pid} iniciando su tarea`)
-    const sum = calculo(500000000)
+    const sum = calculo(5000000)
     process.send(sum)
     console.log(`worker #${process.pid} finalizó su trabajo`)
     process.exit()

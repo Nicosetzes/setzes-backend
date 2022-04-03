@@ -22,6 +22,16 @@ In order to run this project, you just need to:
 
 3) Run the server.js file with node (NodeJs).
 
+## Useful commands to run this project
+
+## FORK mode with pm2:
+
+pm2 start server.js --watch -- PORT
+
+## CLUSTER mode with pm2:
+
+pm2 start server.js --watch -i max -- PORT
+
 ## Tools required
 
 * [NodeJs](https://nodejs.org/en/)
