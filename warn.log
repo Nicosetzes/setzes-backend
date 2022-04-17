@@ -1,0 +1,47 @@
+[2022-04-08T09:10:49.487] [WARN] prod - Ruta GET /loginnnn no implementada
+[2022-04-08T09:16:09.634] [ERROR] prod - Error: querySrv ECONNREFUSED _mongodb._tcp.cluster0.hhq82.mongodb.net
+    at QueryReqWrap.onresolve [as oncomplete] (dns.js:210:19) {
+  errno: undefined,
+  code: 'ECONNREFUSED',
+  syscall: 'querySrv',
+  hostname: '_mongodb._tcp.cluster0.hhq82.mongodb.net'
+}
+[2022-04-08T10:19:14.983] [WARN] prod - Ruta GET /socket.io/socket.io.js no implementada
+[2022-04-08T10:19:22.312] [WARN] prod - Ruta GET /api/randoms-sin no implementada
+[2022-04-08T10:19:22.592] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:20:03.635] [WARN] prod - Ruta GET /api/randoms-sin no implementada
+[2022-04-08T10:20:03.833] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:20:21.374] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:21:17.098] [WARN] prod - Ruta GET /api/randoms-sin no implementada
+[2022-04-08T10:21:17.244] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:21:21.695] [WARN] prod - Ruta GET /api/randoms-con no implementada
+[2022-04-08T10:21:21.822] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:22:06.005] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:22:09.011] [WARN] prod - Ruta GET /api/randoms-sin no implementada
+[2022-04-08T10:22:09.348] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:26:03.513] [WARN] prod - Ruta GET /api/randoms-sin no implementada
+[2022-04-08T10:26:03.680] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:26:09.280] [WARN] prod - Ruta GET /api/api/randoms-sin no implementada
+[2022-04-08T10:26:09.419] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:26:13.256] [WARN] prod - Ruta GET /api/randoms-sin no implementada
+[2022-04-08T10:26:13.715] [WARN] prod - Ruta GET /api/randoms-sin no implementada
+[2022-04-08T10:26:13.926] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:31:23.462] [WARN] prod - Ruta GET /api/randomsSin no implementada
+[2022-04-08T10:31:23.797] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:32:14.272] [WARN] prod - Ruta GET /api/hola no implementada
+[2022-04-08T10:32:14.442] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:34:56.407] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:45:26.456] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:45:33.469] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:50:25.617] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T10:58:14.070] [WARN] prod - Ruta GET /socket.io/socket.io.js no implementada
+[2022-04-08T10:58:14.251] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T11:00:02.359] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T11:00:07.652] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T11:00:09.940] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T11:00:21.249] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T11:35:51.597] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T12:10:27.357] [WARN] prod - Ruta GET /socket.io/socket.io.js no implementada
+[2022-04-08T12:10:30.954] [WARN] prod - Ruta GET /favicon.ico no implementada
+[2022-04-08T12:10:39.474] [WARN] prod - Ruta GET /socket.io/socket.io.js no implementada
+[2022-04-08T12:10:39.632] [WARN] prod - Ruta GET /favicon.ico no implementada

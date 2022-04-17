@@ -1,6 +1,6 @@
 // Utilizo dotenv para aplicar variables de entorno //
 
-const dotenv = require("dotenv").config()
+const dotenv = require("dotenv").config();
 // import dotenv from 'dotenv'
 // dotenv.config()
 
@@ -10,21 +10,21 @@ let administrator = true;
 
 /* -------------------- DATABASE -------------------- */
 
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 // import mongoose from "mongoose";
 
 mongoose
   .connect(
     `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@cluster0.hhq82.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
   )
-  .then(() => console.log("Base de datos MongoDB conectada"))
-  .catch((err) => console.log(err));
+  .then(() => logger.info("Base de datos MongoDB conectada"))
+  .catch((err) => logger.error(err));
 
 // import { ContenedorMongo } from "./contenedores/contenedorMongo.js";
 const ContenedorMongo = require("./contenedores/contenedorMongo.js");
 
 // import * as messagesModel from "./models/messages.js";
-const messagesModel = require("./models/messages.js")
+const messagesModel = require("./models/messages.js");
 
 const containerMongoMessages = new ContenedorMongo(messagesModel);
 
@@ -56,8 +56,7 @@ app.use(
   session({
     store: MongoStore.create({
       //En Atlas connect App :  Make sure to change the node version to 2.2.12:
-      mongoUrl:
-        `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@cluster0-shard-00-00.hhq82.mongodb.net:27017,cluster0-shard-00-01.hhq82.mongodb.net:27017,cluster0-shard-00-02.hhq82.mongodb.net:27017/myFirstDatabase?ssl=true&replicaSet=atlas-8z3eku-shard-0&authSource=admin&retryWrites=true&w=majority`,
+      mongoUrl: `mongodb://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@cluster0-shard-00-00.hhq82.mongodb.net:27017,cluster0-shard-00-01.hhq82.mongodb.net:27017,cluster0-shard-00-02.hhq82.mongodb.net:27017/myFirstDatabase?ssl=true&replicaSet=atlas-8z3eku-shard-0&authSource=admin&retryWrites=true&w=majority`,
       mongoOptions: advancedOptions,
     }),
     secret: `${process.env.MONGO_SECRET}`,
@@ -93,34 +92,34 @@ const createHash = (password) => {
 
 passport.use(
   "register",
-  new LocalStrategy(
-    (username, password, done) => {
-
-      usersModel.findOne({ username: username })
-        .then(user => {
-          if (!user) {
-            const newUser = new usersModel({
-              username: username,
-              password: createHash(password)
+  new LocalStrategy((username, password, done) => {
+    usersModel
+      .findOne({ username: username })
+      .then((user) => {
+        if (!user) {
+          const newUser = new usersModel({
+            username: username,
+            password: createHash(password),
+          });
+          console.log(newUser);
+          usersModel
+            .create(newUser)
+            .then((user) => {
+              return done(null, user);
+            })
+            .catch((err) => {
+              return done(null, false, { message: err });
             });
-            console.log(newUser);
-            usersModel.create(newUser)
-              .then(user => {
-                return done(null, user);
-              })
-              .catch(err => {
-                return done(null, false, { message: err })
-              })
-          }
-          else {
-            return done(null, false, { message: "This user has already been registered" });
-          }
-        })
-        .catch(err => {
-          return done(null, false, { message: err })
-        })
-    }
-  )
+        } else {
+          return done(null, false, {
+            message: "This user has already been registered",
+          });
+        }
+      })
+      .catch((err) => {
+        return done(null, false, { message: err });
+      });
+  })
 );
 
 passport.use(
@@ -130,25 +129,29 @@ passport.use(
       passReqToCallback: true, // Allows for req argument to be present!
     },
     (req, username, password, done) => {
-
-      usersModel.findOne({ username: username })
-        .then(user => {
+      usersModel
+        .findOne({ username: username })
+        .then((user) => {
           console.log(user);
-          if (!user) return done(null, false, { message: "The user doesn't exist in the DB" }); // How may I access this object in order to display the message?;
+          if (!user)
+            return done(null, false, {
+              message: "The user doesn't exist in the DB",
+            }); // How may I access this object in order to display the message?;
           bCrypt.compare(password, user.password, (err, success) => {
             console.log(password, user.password);
             if (err) throw err;
             if (success) {
               req.session.username = user.username;
-              done(null, user)
-            }
-            else {
-              done(null, false, { message: "User was found in the DB, but passwords don't match" }); // Same as above;
+              done(null, user);
+            } else {
+              done(null, false, {
+                message: "User was found in the DB, but passwords don't match",
+              }); // Same as above;
             }
           });
         })
-        .catch(err => {
-          return done(null, false, { message: err })
+        .catch((err) => {
+          return done(null, false, { message: err });
         });
 
       passport.serializeUser((user, done) => done(null, user.id));
@@ -158,7 +161,8 @@ passport.use(
           done(err, user);
         });
       });
-    })
+    }
+  )
 );
 
 /* -------------------- ROUTER -------------------- */
@@ -190,13 +194,13 @@ const isAuth = (req, res, next) => {
 const http = require("http");
 
 // import { Server, Socket } from "socket.io";
-const { Server: HttpServer } = require('http')
-const { Server: IOServer } = require('socket.io')
+const { Server: HttpServer } = require("http");
+const { Server: IOServer } = require("socket.io");
 
 // const server = http.Server(app);
-const httpServer = new HttpServer(app)
+const httpServer = new HttpServer(app);
 // const io = new Server(server);
-const io = new IOServer(httpServer)
+const io = new IOServer(httpServer);
 
 // const messages = [];
 
@@ -255,12 +259,14 @@ app.get("/", isAuth, (req, res) => {
   req.session.cookie.maxAge = 100000;
   const userEmail = req.session.username;
   res.render("productos", { productos, userEmail });
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 // PARA LOGIN
 
 app.get("/login", (req, res) => {
   res.render("login", {});
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 app.post(
@@ -273,6 +279,7 @@ app.post(
 
 app.get("/faillogin", (req, res) => {
   res.render("login-error", {});
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 // LOGOUT
@@ -280,12 +287,14 @@ app.get("/faillogin", (req, res) => {
 app.post("/logout", (req, res) => {
   req.logout();
   res.redirect("/");
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 // PARA REGISTER:
 
 app.get("/register", (req, res) => {
   res.render("register", {});
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 app.post(
@@ -298,6 +307,7 @@ app.post(
 
 app.get("/failregister", (req, res) => {
   res.render("register-error", {});
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 // *************** RUTA INFO (DESAFÍO CLASE 28) *************** //
@@ -311,8 +321,9 @@ app.get("/info", (req, res) => {
     path: process.execPath,
     PID: process.pid,
     folder: process.cwd(),
-  }
+  };
   res.render("info", { info });
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 // RUTAS NO BLOQUEANTES, USO DE FORK (DESAFÍO CLASE 28) //
@@ -322,22 +333,92 @@ const path = require("path");
 
 app.get("/api/randoms", (req, res) => {
   // const qty = Number(req.query.qty) || 100000000;
-  const calculation = fork(path.resolve(__dirname, 'computo.js'));
-  calculation.send('start');
-  calculation.on('message', result => {
-    res.json({ result })
+  const calculation = fork(path.resolve(__dirname, "computo.js"));
+  calculation.send("start");
+  calculation.on("message", (result) => {
+    res.json({ result });
   });
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
+
+// *************** DESAFÍO CLASE 32 - LOGGERS *************** //
+
+const logger = require("./logger.js");
+
+// EXTRAYENDO (O NO) UN CONSOLE.LOG //
+
+app.get("/info-sin", (req, res) => {
+  const info = {
+    argumentos_de_entrada: process.argv,
+    so: process.platform,
+    node_version: process.version,
+    rss: process.memoryUsage().rss,
+    path: process.execPath,
+    PID: process.pid,
+    folder: process.cwd(),
+  };
+  res.render("info", { info });
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
+});
+
+// artillery quick --count 50 -n 20 http://localhost:8081/info-sin > result_fork-sin.txt
+
+app.get("/info-con", (req, res) => {
+  const info = {
+    argumentos_de_entrada: process.argv,
+    so: process.platform,
+    node_version: process.version,
+    rss: process.memoryUsage().rss,
+    path: process.execPath,
+    PID: process.pid,
+    folder: process.cwd(),
+  };
+  console.log(info);
+  res.render("info", { info });
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
+});
+
+// artillery quick --count 50 -n 20 http://localhost:8081/info-con > result_fork-con.txt
+
+// NODE BUILT-IN PROFILER
+
+// node --prof server.js
+
+// EN OTRA CONSOLA:
+
+// artillery quick --count 50 -n 20 http://localhost:8081/info-sin > result_cluster-sin.txt
+
+// artillery quick --count 50 -n 20 http://localhost:8081/info-con > result_cluster-con.txt
+
+// node --prof-process sin-v8.log > result_prof-sin.txt
+
+// node --prof-process con-v8.log > result_prof-con.txt
+
+// AHORA CON AUTOCANNON: //
+// MODIFICO package.json //
+
+// "scripts": {
+//   "test": "node benchmark.js",
+//   "start": "0x server.js"
+// }
+
+// npm start
+
+// EN OTRA CONSOLA:
+
+// npm test
 
 // LLAMADAS HTTP PARA EL ROUTER BASE /API/PRODUCTOS
 
 productosR.get("/", (req, res) => {
   res.send(container.getAll());
+  logger.info(`Ruta: ${req.route}, Método: ${req.method}`);
 });
 
 productosR.get("/:id", (req, res) => {
   const idProvided = Number(req.params.id);
   res.send(container.getById(idProvided));
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 productosR.post("/", (req, res) => {
@@ -350,6 +431,7 @@ productosR.post("/", (req, res) => {
   } else {
     res.send(errorAuth);
   }
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 productosR.put("/:id", (req, res) => {
@@ -363,6 +445,7 @@ productosR.put("/:id", (req, res) => {
   } else {
     res.send(errorAuth);
   }
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 productosR.delete("/:id", (req, res) => {
@@ -372,6 +455,7 @@ productosR.delete("/:id", (req, res) => {
   } else {
     res.send(errorAuth);
   }
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 // LLAMADAS HTTP PARA EL ROUTER BASE /API/CARRITO
@@ -396,6 +480,7 @@ carritoR.get("/:id/productos", (req, res) => {
       ? res.send(filteredArray[0].products)
       : res.send({ products: "No hay productos en este carrito" });
   }
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 carritoR.post("/", (req, res) => {
@@ -418,6 +503,7 @@ carritoR.post("/", (req, res) => {
     res.send(newCart.cartId.toString());
   }
   fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 carritoR.post("/:id/productos", (req, res) => {
@@ -433,6 +519,7 @@ carritoR.post("/:id/productos", (req, res) => {
     res.redirect("/");
   }
   fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 carritoR.delete("/:id", (req, res) => {
@@ -447,6 +534,7 @@ carritoR.delete("/:id", (req, res) => {
     res.send(errorId);
   }
   fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 carritoR.delete("/:id/productos/:id_prod", (req, res) => {
@@ -471,6 +559,7 @@ carritoR.delete("/:id/productos/:id_prod", (req, res) => {
     }
   }
   fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 // Desafío MOCKS Y NORMALIZACIÓN: Genero una ruta '/api/productos-test' que devuelva 5 productos al azar utilizando Faker.js //
@@ -514,55 +603,83 @@ const numCPUs = require("os").cpus().length;
 if (isCluster === "CLUSTER") {
   if (cluster.isPrimary) {
     console.log(numCPUs);
-    console.log(`PRIMARY ${process.pid} is running`)
+    console.log(`PRIMARY ${process.pid} is running`);
 
     for (let i = 0; i < numCPUs; i++) {
       cluster.fork();
     }
 
-    cluster.on("exit", worker => {
-      console.log("Worker", worker.process.pid, "died", new Date().toLocaleString());
+    cluster.on("exit", (worker) => {
+      console.log(
+        "Worker",
+        worker.process.pid,
+        "died",
+        new Date().toLocaleString()
+      );
       cluster.fork();
-    })
-  }
-
-  /* WORKERS */
-
-  else {
-
+    });
+  } else {
+    /* WORKERS */
     const PORT = parseInt(process.argv[2]) || 8080;
 
     app.get("/api", (req, res) => {
-      res.send(`Servidor Express en ${PORT} - <b>PID ${process.pid}</b> - ${new Date().toLocaleDateString()}`)
+      res.send(
+        `Servidor Express en ${PORT} - <b>PID ${process.pid
+        }</b> - ${new Date().toLocaleDateString()}`
+      );
     });
 
     app.get("/api/info", (req, res) => {
-      res.send(`Servidor Express en ${PORT} - <b>Cantidad de procesadores: ${numCPUs}</b>`)
+      res.send(
+        `Servidor Express en ${PORT} - <b>Cantidad de procesadores: ${numCPUs}</b>`
+      );
     });
 
-    app.listen(PORT, err => {
-      if (!err) console.log(`Servidor Express escuchando en el puerto ${PORT} - PID WORKER ${process.pid}`);
+    app.listen(PORT, (err) => {
+      if (!err)
+        logger.info(
+          `Servidor Express escuchando en el puerto ${PORT} - PID WORKER ${process.pid}`
+        );
+      else {
+        logger.error(err);
+      }
     });
-  };
-}
-
-else {
-
+  }
+} else {
   // MODO FORK
 
   app.get("/api", (req, res) => {
-    res.send(`Servidor Express en ${PORT} - <b>PID ${process.pid}</b> - ${new Date().toLocaleDateString()}`);
+    res.send(
+      `Servidor Express en ${PORT} - <b>PID ${process.pid
+      }</b> - ${new Date().toLocaleDateString()}`
+    );
+    logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
   });
 
   app.get("/api/info", (req, res) => {
-    res.send(`Servidor Express en ${PORT} - <b>Cantidad de procesadores: ${numCPUs}</b>`)
+    res.send(
+      `Servidor Express en ${PORT} - <b>Cantidad de procesadores: ${numCPUs}</b>`
+    );
+    logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
   });
 
-  app.listen(PORT, err => {
-    if (!err) console.log(`Servidor Express escuchando en el puerto ${PORT} - PID WORKER ${process.pid}`);
+  app.listen(PORT, (err) => {
+    if (!err)
+      logger.info(
+        `Servidor Express escuchando en el puerto ${PORT} - PID WORKER ${process.pid}`
+      );
+    else {
+      logger.error(err);
+    }
   });
-
 }
+// DEFINO RUTAS INEXISTENTES //
+
+app.get("*", (req, res) => {
+  const { url, method } = req;
+  logger.warn(`Ruta ${method} ${url} no implementada`);
+  res.send(`Ruta ${method} ${url} no está implementada`);
+});
 
 // tasklist /fi "imagename eq node.exe" -> Lista todos los procesos de node.js activos.
 
