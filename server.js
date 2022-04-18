@@ -593,7 +593,11 @@ app.get("/api/productos-test", (req, res) => {
 
 // DEFINO SI INICIO EL SERVER EN MODO FORK O EN MODO CLUSTER (FORK POR DEFECTO) //
 
-const PORT = parseInt(process.argv[2]) || 8080;
+// const PORT = parseInt(process.argv[2]) || 8080;
+
+// ************* FOR HEROKU *********** //
+
+const PORT = process.env.PORT || 8080;
 
 const isCluster = process.argv[3] || "FORK";
 
@@ -620,7 +624,7 @@ if (isCluster === "CLUSTER") {
     });
   } else {
     /* WORKERS */
-    const PORT = parseInt(process.argv[2]) || 8080;
+    // const PORT = parseInt(process.argv[2]) || 8080;
 
     app.get("/api", (req, res) => {
       res.send(
