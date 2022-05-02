@@ -1,0 +1,41 @@
+<%- include('./partials/header')-%>
+
+    <body>
+        <div class="container mt-3">
+            <div class="jumbotron">
+                <h1 style="color:blue;">Sesión iniciada como: <%- user.username -%>
+                </h1>
+                <form action="./logout" method="post">
+                    <button class="btn btn-success mt-3 mb-5">Cerrar sesión</button>
+                </form>
+            </div>
+        </div>
+        <div class="container mt-3">
+            <div>Información del usuario:</div>
+            <ul>
+                <li>
+                    Nombre del usuario: <%- user.username -%>
+                </li>
+                <li>
+                    Nombre: <%- user.firstName -%>
+                </li>
+                <li>
+                    Apellido: <%- user.lastName -%>
+                </li>
+                <li>
+                    Dirección: <%- user.adress -%>
+                </li>
+                <li>
+                    Edad: <%- user.age -%>
+                </li>
+                <li>
+                    Teléfono: <%- user.phone -%>
+                </li>
+            </ul>
+            <div>Volver al <a href="/">home</a> </div>
+        </div>
+
+        <script src="../js/main.js"></script>
+    </body>
+
+    <%- include('./partials/footer')-%>

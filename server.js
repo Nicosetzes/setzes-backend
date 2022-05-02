@@ -20,16 +20,16 @@ mongoose
   .then(() => logger.info("Base de datos MongoDB conectada"))
   .catch((err) => logger.error(err));
 
-// import { ContenedorMongo } from "./contenedores/contenedorMongo.js";
 const ContenedorMongo = require("./contenedores/contenedorMongo.js");
 
-// import * as messagesModel from "./models/messages.js";
 const messagesModel = require("./models/messages.js");
 
 const containerMongoMessages = new ContenedorMongo(messagesModel);
 
-// import { usersModel } from "./models/users.js";
 const usersModel = require("./models/users.js");
+const productsModel = require("./models/products.js");
+const cartsModel = require("./models/carts.js");
+const ordersModel = require("./models/orders.js");
 
 // const containerMongoUsers = new ContenedorMongo(usersModel.usersModel);
 
@@ -44,8 +44,6 @@ const app = express();
 
 // import session from "express-session";
 const session = require("express-session");
-// import cookieParser from "cookie-parser";
-const cookieParser = require("cookie-parser");
 // import MongoStore from "connect-mongo";
 const MongoStore = require("connect-mongo");
 
@@ -61,7 +59,7 @@ app.use(
     }),
     secret: `${process.env.MONGO_SECRET}`,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     cookie: {
       maxAge: 100000,
     },
@@ -71,6 +69,50 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
+
+/* -------------------- NODEMAILER -------------------- */
+
+const nodemailer = require("nodemailer");
+
+const adminEmail = 'bk6qeodom4dz3fmq@ethereal.email'
+
+const transporter = nodemailer.createTransport({
+  host: 'smtp.ethereal.email',
+  port: 587,
+  auth: {
+    user: adminEmail,
+    pass: 'y81NDKABexaCUAwyZx'
+  }
+});
+
+const newRegisterMail = (user) => {
+  return {
+    from: 'Servidor Node.js',
+    to: adminEmail,
+    subject: 'Datos de registro - Nuevo usuario',
+    html: `<h1 style="color: blue;">Datos de registro</h1>
+    <div>username: ${user.username}</div>
+    <div>password: ${user.password}</div>
+    <div>firstName: ${user.firstName}</div>
+    <div>lastName: ${user.lastName}</div>
+    <div>address: ${user.address}</div>
+    <div>age: ${user.age}</div>
+    <div>phone: ${user.phone}</div>`
+  }
+}
+
+const newBuyOrderMail = (order) => {
+  return {
+    from: 'Servidor Node.js',
+    to: adminEmail,
+    subject: 'Datos de compra realizada',
+    html: `<h1 style="color: blue;">Datos de la operación</h1>
+    <div>Productos: ${order.items}</div>
+    <div>Nro de orden: ${order.orderNumber}</div>
+    <div>Estado: ${order.state}</div>
+    <div>Email del cliente: ${order.clientEmail}</div>`
+  }
+}
 
 /* -------------------- PASSPORT -------------------- */
 
@@ -92,56 +134,62 @@ const createHash = (password) => {
 
 passport.use(
   "register",
-  new LocalStrategy((username, password, done) => {
-    usersModel
-      .findOne({ username: username })
-      .then((user) => {
-        if (!user) {
-          const newUser = new usersModel({
-            username: username,
-            password: createHash(password),
-          });
-          console.log(newUser);
-          usersModel
-            .create(newUser)
-            .then((user) => {
-              return done(null, user);
-            })
-            .catch((err) => {
-              return done(null, false, { message: err });
+  new LocalStrategy({
+    passReqToCallback: true, // Allows for req argument to be present!
+  },
+    (req, username, password, done) => {
+      usersModel
+        .findOne({ username: username })
+        .then((user) => {
+          if (!user) {
+            const { firstName, lastName, address, age, phone } = req.body;
+            const newUser = new usersModel({
+              username: username,
+              password: createHash(password),
+              firstName,
+              lastName,
+              address,
+              age,
+              phone
             });
-        } else {
-          return done(null, false, {
-            message: "This user has already been registered",
-          });
-        }
-      })
-      .catch((err) => {
-        return done(null, false, { message: err });
-      });
-  })
+            transporter.sendMail(createMailOptions(newUser))
+              .then((info) => {
+                console.log(info)
+              });
+            usersModel
+              .create(newUser)
+              .then((user) => {
+                return done(null, user);
+              })
+              .catch((err) => {
+                return done(null, false, { message: err });
+              });
+          } else {
+            return done(null, false, {
+              message: "This user has already been registered",
+            });
+          }
+        })
+        .catch((err) => {
+          return done(null, false, { message: err });
+        });
+    })
 );
 
 passport.use(
   "login",
   new LocalStrategy(
-    {
-      passReqToCallback: true, // Allows for req argument to be present!
-    },
-    (req, username, password, done) => {
+    (username, password, done) => {
       usersModel
         .findOne({ username: username })
         .then((user) => {
-          console.log(user);
           if (!user)
             return done(null, false, {
               message: "The user doesn't exist in the DB",
             }); // How may I access this object in order to display the message?;
           bCrypt.compare(password, user.password, (err, success) => {
-            console.log(password, user.password);
             if (err) throw err;
             if (success) {
-              req.session.username = user.username;
               done(null, user);
             } else {
               done(null, false, {
@@ -154,10 +202,12 @@ passport.use(
           return done(null, false, { message: err });
         });
 
-      passport.serializeUser((user, done) => done(null, user.id));
+      passport.serializeUser(function (user, done) {
+        done(null, user.id);
+      });
 
-      passport.deserializeUser((id, done) => {
-        usersModel.findById(id, (err, user) => {
+      passport.deserializeUser(function (id, done) {
+        usersModel.findById(id, function (err, user) {
           done(err, user);
         });
       });
@@ -168,14 +218,14 @@ passport.use(
 /* -------------------- ROUTER -------------------- */
 
 const { Router } = express;
-const productosR = Router();
-const carritoR = Router();
-app.use("/api/productos", productosR);
-app.use("/api/carrito", carritoR);
-productosR.use(express.json());
-productosR.use(express.urlencoded({ extended: true }));
-carritoR.use(express.json());
-carritoR.use(express.urlencoded({ extended: true }));
+const productsR = Router();
+const cartR = Router();
+app.use("/api/products", productsR);
+app.use("/api/cart", cartR);
+productsR.use(express.json());
+productsR.use(express.urlencoded({ extended: true }));
+cartR.use(express.json());
+cartR.use(express.urlencoded({ extended: true }));
 
 /* -------------------- EJS -------------------- */
 
@@ -191,7 +241,7 @@ const isAuth = (req, res, next) => {
 // WEBSOCKETS - CHAT
 
 // import http from "http";
-const http = require("http");
+// const http = require("http");
 
 // import { Server, Socket } from "socket.io";
 const { Server: HttpServer } = require("http");
@@ -251,14 +301,38 @@ io.on("connection", function (socket) {
 
 /* -------------------- ROUTES -------------------- */
 
-const productos = [];
+// const productos = [];
 
 // INICIO
 
-app.get("/", isAuth, (req, res) => {
+app.get("/", isAuth, async (req, res) => {
   req.session.cookie.maxAge = 100000;
-  const userEmail = req.session.username;
-  res.render("productos", { productos, userEmail });
+  const userInSession = await usersModel.findById(req.session.passport.user);
+  try {
+    let cartFromUserArray = await cartsModel.find({ userId: userInSession.id });
+    const cartFromUser = cartFromUserArray[0];
+    if (cartFromUser) {
+      console.log("Ya existe un carrito")
+      req.session.cartId = cartFromUser.id;
+      res.render("home", { userInSession, cartFromUser });
+    }
+    else {
+      console.log("No hay carrito")
+      let cartFromUser = {
+        email: userInSession.username,
+        date: new Date().toLocaleDateString(), // It's not working
+        items: [],
+        address: userInSession.address,
+        userId: userInSession.id
+      }
+      await cartsModel.create(cartFromUser)
+      req.session.cartId = cartFromUser.id;
+      res.render("home", { userInSession, cartFromUser });
+    }
+  }
+  catch (err) {
+    return res.status(500).send("Something went wrong!" + err);
+  }
   logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
@@ -309,6 +383,15 @@ app.get("/failregister", (req, res) => {
   res.render("register-error", {});
   logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
+
+app.get("/user-profile", async (req, res) => {
+  console.log(req.session);
+  // const userName = req.session.username
+  const userId = req.session.passport.user;
+  const user = await usersModel.findById(userId)
+  res.render("user-profile", { user });
+  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
+})
 
 // *************** RUTA INFO (DESAFÍO CLASE 28) *************** //
 
@@ -410,157 +493,159 @@ app.get("/info-con", (req, res) => {
 
 // LLAMADAS HTTP PARA EL ROUTER BASE /API/PRODUCTOS
 
-productosR.get("/", (req, res) => {
-  res.send(container.getAll());
+productsR.get("/", async (req, res) => {
+  const allProducts = await productsModel.find({});
+  // const cartFromUserArray = await cartsModel.find({ userId: req.session.passport.user }, "userId");
+  // const cartFromUser = cartFromUserArray[0]
+  res.render("products", { allProducts });
   logger.info(`Ruta: ${req.route}, Método: ${req.method}`);
 });
 
-productosR.get("/:id", (req, res) => {
-  const idProvided = Number(req.params.id);
-  res.send(container.getById(idProvided));
+productsR.get("/:id", (req, res) => {
+  // const idProvided = Number(req.params.id);
+  // res.send(container.getById(idProvided));
+  // logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
+});
+
+productsR.post("/", (req, res) => {
+  // if (administrator) {
+  //   console.log(req.body);
+  //   container.save(req.body);
+  //   productos.push(req.body);
+  //   console.log(productos);
+  //   res.redirect("/");
+  // } else {
+  //   res.send(errorAuth);
+  // }
   logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
-productosR.post("/", (req, res) => {
-  if (administrator) {
-    console.log(req.body);
-    container.save(req.body);
-    productos.push(req.body);
-    console.log(productos);
-    res.redirect("/");
-  } else {
-    res.send(errorAuth);
-  }
+productsR.put("/:id", (req, res) => {
+  // const idProvided = Number(req.params.id);
+  // if (administrator) {
+  //   container.updateById(idProvided, {
+  //     ...req.body,
+  //     id: idProvided,
+  //   });
+  //   res.send(container.getById(idProvided));
+  // } else {
+  //   res.send(errorAuth);
+  // }
   logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
-productosR.put("/:id", (req, res) => {
-  const idProvided = Number(req.params.id);
-  if (administrator) {
-    container.updateById(idProvided, {
-      ...req.body,
-      id: idProvided,
-    });
-    res.send(container.getById(idProvided));
-  } else {
-    res.send(errorAuth);
-  }
-  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
-});
-
-productosR.delete("/:id", (req, res) => {
-  const idProvided = Number(req.params.id);
-  if (administrator) {
-    res.send(container.deleteById(idProvided));
-  } else {
-    res.send(errorAuth);
-  }
+productsR.delete("/:id", (req, res) => {
+  // const idProvided = Number(req.params.id);
+  // if (administrator) {
+  //   res.send(container.deleteById(idProvided));
+  // } else {
+  //   res.send(errorAuth);
+  // }
   logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
 // LLAMADAS HTTP PARA EL ROUTER BASE /API/CARRITO
 
-const cartArray = [];
-
-const productsArray = [];
-
-const date = new Date();
-
 // const product = {id, productTimestamp, name, description, code, url, price, stock}
 
-carritoR.get("/:id/productos", (req, res) => {
-  const idProvided = Number(req.params.id);
-  const filteredArray = cartArray.filter(
-    (element) => element.cartId === idProvided
-  );
-  if (filteredArray.length === 0) {
-    res.send(errorId);
-  } else {
-    filteredArray[0].products.length > 0
-      ? res.send(filteredArray[0].products)
-      : res.send({ products: "No hay productos en este carrito" });
-  }
+cartR.get("/:id", async (req, res) => {
+  const cartId = req.params.id;
+  const cartFromUser = await cartsModel.findById(cartId);
+  res.render("cart", { cartFromUser })
   logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
 
-carritoR.post("/", (req, res) => {
-  if (cartArray.length === 0) {
-    const newCart = {
-      cartId: 1,
-      cartTimeStamp: date.toLocaleString(),
-      products: [],
-    };
-    cartArray.push(newCart);
-    res.send(newCart.cartId.toString());
-  } else {
-    const indexOfLastElement = cartArray.length - 1;
-    const newCart = {
-      cartId: cartArray[indexOfLastElement].cartId + 1,
-      cartTimeStamp: date.toLocaleString(),
-      products: [],
-    };
-    cartArray.push(newCart);
-    res.send(newCart.cartId.toString());
-  }
-  fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
-  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
-});
-
-carritoR.post("/:id/productos", (req, res) => {
-  const idProvided = Number(req.params.id);
-  const indexOfElement = cartArray.findIndex(
-    (element) => element.cartId === idProvided
-  );
-  if (indexOfElement === -1) {
-    res.send(errorId);
-  } else {
-    productsArray.push(req.body);
-    cartArray[indexOfElement].products = productsArray;
-    res.redirect("/");
-  }
-  fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
-  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
-});
-
-carritoR.delete("/:id", (req, res) => {
-  const idProvided = Number(req.params.id);
-  const indexOfElement = cartArray.findIndex(
-    (element) => element.cartId === idProvided
-  );
-  if (indexOfElement !== -1) {
-    cartArray.splice(indexOfElement, 1);
-    res.redirect("/");
-  } else {
-    res.send(errorId);
-  }
-  fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
-  logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
-});
-
-carritoR.delete("/:id/productos/:id_prod", (req, res) => {
-  const idProvidedForCart = Number(req.params.id);
-  const idProvidedForProduct = Number(req.params.id_prod);
-
-  const indexOfCart = cartArray.findIndex(
-    (element) => element.cartId === idProvidedForCart
-  );
-  if (indexOfCart === -1) {
-    res.send(errorId);
-  } else {
-    const productsFromFilteredCart = cartArray[indexOfCart].products;
-    const indexOfProduct = productsFromFilteredCart.findIndex(
-      (element) => element.id === idProvidedForProduct
-    );
-    if (indexOfProduct === -1) {
-      res.send(errorId);
-    } else {
-      productsFromFilteredCart.splice(indexOfProduct, 1);
-      res.send(cartArray);
+cartR.post("/:id", async (req, res) => {
+  const userId = req.session.passport.user;
+  const cartId = req.session.cartId;
+  const productId = req.params.id;
+  try {
+    const cartFromUser = await cartsModel.findById(cartId);
+    const itemsFromCart = cartFromUser.items;
+    if (itemsFromCart.length) {
+      const indexOfItemInCart = itemsFromCart.findIndex((element) => element.productId === productId); // revisar
+      if (indexOfItemInCart !== -1) {
+        itemsFromCart[indexOfItemInCart].qty++;
+        await cartsModel.updateOne({ userId: userId }, { $set: { items: itemsFromCart } });
+      }
+      else {
+        const productToAdd = await productsModel.findById(productId);
+        productToAdd.qty = 1;
+        productToAdd.productId = productToAdd.id;
+        await cartsModel.updateOne({ userId: userId }, { $push: { items: productToAdd } });
+      }
     }
+    else {
+      const productToAdd = await productsModel.findById(productId);
+      productToAdd.qty = 1;
+      productToAdd.productId = productToAdd.id;
+      await cartsModel.updateOne({ userId: userId }, { $push: { items: productToAdd } });
+    }
+    res.redirect(`/api/cart/${cartId}`);
+  } catch (err) {
+    return res.status(500).send("Something went wrong!" + err);
   }
-  fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
+})
+
+cartR.post("/:id/products", async (req, res) => {
+  const cartId = req.params.id;
+  const cartFromUser = await cartsModel.findById(cartId);
+  const order = {
+    items: (cartFromUser.items).sort((a, b) => (a.qty < b.qty) ? 1 : -1), // Ordenados por cantidad de items
+    orderNumber: (await ordersModel.countDocuments({})) + 1,
+    state: "generated",
+    clientEmail: cartFromUser.email
+  };
+  await ordersModel.create(order);
+  await cartsModel.findByIdAndRemove(cartFromUser.id);
+  // ENVIAR MAIL CON LOS DETALLES DE LA COMPRA
+  transporter.sendMail(newBuyOrderMail(order))
+    .then((info) => {
+      console.log(info)
+    });
+  res.redirect("/");
   logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
 });
+
+// cartR.delete("/:id", (req, res) => {
+//   const idProvided = Number(req.params.id);
+//   const indexOfElement = cartArray.findIndex(
+//     (element) => element.cartId === idProvided
+//   );
+//   if (indexOfElement !== -1) {
+//     cartArray.splice(indexOfElement, 1);
+//     res.redirect("/");
+//   } else {
+//     res.send(errorId);
+//   }
+//   fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
+//   logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
+// });
+
+// cartR.delete("/:id/productos/:id_prod", (req, res) => {
+//   const idProvidedForCart = Number(req.params.id);
+//   const idProvidedForProduct = Number(req.params.id_prod);
+
+//   const indexOfCart = cartArray.findIndex(
+//     (element) => element.cartId === idProvidedForCart
+//   );
+//   if (indexOfCart === -1) {
+//     res.send(errorId);
+//   } else {
+//     const productsFromFilteredCart = cartArray[indexOfCart].products;
+//     const indexOfProduct = productsFromFilteredCart.findIndex(
+//       (element) => element.id === idProvidedForProduct
+//     );
+//     if (indexOfProduct === -1) {
+//       res.send(errorId);
+//     } else {
+//       productsFromFilteredCart.splice(indexOfProduct, 1);
+//       res.send(cartArray);
+//     }
+//   }
+//   fs.writeFileSync("./carts.txt", JSON.stringify(cartArray));
+//   logger.info(`Ruta: ${req.path}, Método: ${req.method}`);
+// });
 
 // Desafío MOCKS Y NORMALIZACIÓN: Genero una ruta '/api/productos-test' que devuelva 5 productos al azar utilizando Faker.js //
 
@@ -602,6 +687,9 @@ const PORT = process.env.PORT || 8080;
 const isCluster = process.argv[3] || "FORK";
 
 const cluster = require("cluster");
+const users = require("./models/users.js");
+const carts = require("./models/carts.js");
+const { findByIdAndUpdate } = require("./models/messages.js");
 const numCPUs = require("os").cpus().length;
 
 if (isCluster === "CLUSTER") {

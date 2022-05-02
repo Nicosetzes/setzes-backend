@@ -1,0 +1,48 @@
+<%- include('./partials/header')-%>
+    <div class="title">Listado de productos</div>
+    <% if(allProducts.length> 0){ %>
+        <div class="table-responsive">
+            <table class="table table-dark">
+                <tr style="color: rgb(62, 134, 28);">
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Código</th>
+                    <th>Precio</th>
+                    <th>Stock</th>
+                    <th></th>
+                </tr>
+                <%allProducts.forEach(function(element) {%>
+                    <tr>
+                        <td>
+                            <%=element.name%>
+                        </td>
+                        <td>
+                            <%=element.description%>
+                        </td>
+                        <td>
+                            <%=element.code%>
+                        </td>
+                        <td>
+                            $<%=element.price%>
+                        </td>
+                        <td>
+                            <%=element.stock%> unidades
+                        </td>
+                        <td>
+                            <form action="/api/cart/<%-element.id-%>" method="post">
+                                <button type="submit">Agregar al carrito</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <%});%>
+            </table>
+        </div>
+        <div>
+            <a href="/">Volver al home</a>
+        </div>
+        <% } else{ %>
+            <h3 class="alert alert-danger">No se encontraron productos en la base de datos!</h3>
+            <a href="/">Volver</a>
+            <% } %>
+
+                <%- include('./partials/footer')-%>

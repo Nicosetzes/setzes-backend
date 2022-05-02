@@ -1,0 +1,31 @@
+<%- include('./partials/header')-%>
+
+    <body>
+        <div class="container mt-3">
+            <div class="jumbotron">
+                <h1 style="color:blue;">Bienvenido <%-userInSession.username-%>
+                </h1>
+                <form action="/logout" method="post">
+                    <button class="btn btn-success mt-3 mb-5">Cerrar sesión</button>
+                </form>
+            </div>
+        </div>
+        <div class="container mt-3">
+            <div>Menú del visitante</div>
+            <ul>
+                <li>
+                    <a href="/user-profile">Mi perfil</a>
+                </li>
+                <li>
+                    <a href="/api/products">Ver productos</a>
+                </li>
+                <li>
+                    <a href="/api/cart/<%-cartFromUser.id-%>">Mi carrito</a>
+                </li>
+            </ul>
+        </div>
+
+        <script src="../js/main.js"></script>
+    </body>
+
+    <%- include('./partials/footer')-%>

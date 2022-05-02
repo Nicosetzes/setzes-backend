@@ -1,0 +1,36 @@
+<%- include('./partials/header')-%>
+
+    <body>
+        <div class="container mt-3">
+            <div class="jumbotron">
+                <h1 style="color:blue;">Bienvenido <%-cartFromUser.email-%>
+                </h1>
+                <form action="/logout" method="post">
+                    <button class="btn btn-success mt-3 mb-5">Cerrar sesión</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="container mt-3">
+            <div>Carrito</div>
+            <% if(cartFromUser.items.length> 0){ %>
+                <ul>
+                    <%cartFromUser.items.forEach(function(element) {%>
+                        <li>
+                            <%-element.name-%> <strong>(x<%-element.qty-%>)</strong>
+                        </li>
+                        <%});%>
+                </ul>
+                <% } else{ %>
+                    <h3 class="alert alert-danger">NO HAY PRODUCTOS EN EL CARRITO</h3>
+                    <% } %>
+                        <form action="/api/cart/<%-cartFromUser.id-%>/products" method="post">
+                            <button class="btn btn-success mt-3 mb-5">Finalizar compra</button>
+                        </form>
+        </div>
+        <div>Volver al <a href="/">home</a> </div>
+
+        <script src="../js/main.js"></script>
+    </body>
+
+    <%- include('./partials/footer')-%>
